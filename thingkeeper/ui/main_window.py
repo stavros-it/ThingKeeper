@@ -850,6 +850,7 @@ class MainWindow(QMainWindow):
             except (json.JSONDecodeError, TypeError):
                 pass
         sort_raw = self._settings.value(_SETTINGS_SORT)
+        applied = False
         if sort_raw:
             try:
                 sort_col, sort_ord = json.loads(sort_raw)
@@ -857,8 +858,11 @@ class MainWindow(QMainWindow):
                     self.table.sortByColumn(
                         sort_col, Qt.SortOrder(sort_ord)
                     )
+                    applied = True
             except (json.JSONDecodeError, TypeError, ValueError):
                 pass
+        if not applied:
+            self.table.sortByColumn(1, Qt.SortOrder.AscendingOrder)
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt override
         self._save_column_state()
