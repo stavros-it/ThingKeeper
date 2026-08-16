@@ -104,6 +104,8 @@ _SETTINGS_FILTERS = "filters/saved"
 _SETTINGS_RECENT_IMP = "recent/imports"
 _SETTINGS_RECENT_EXP = "recent/exports"
 _SETTINGS_COL_VIS = "columns/visible"
+_SETTINGS_COL_WIDTHS = "columns/widths"
+_SETTINGS_SORT = "table/sort"
 
 
 def _fmt_date(iso: str) -> str:
@@ -268,6 +270,9 @@ class MainWindow(QMainWindow):
         header.customContextMenuRequested.connect(self._show_column_menu)
         for i, (_, w) in enumerate(COLUMNS):
             header.resizeSection(i, w)
+        header.sectionResized.connect(self._on_section_resized)
+        header.sectionMoved.connect(self._on_section_moved)
+        header.sortIndicatorChanged.connect(self._on_sort_changed)
         self.table.doubleClicked.connect(self.edit_selected)
         self.table.itemSelectionChanged.connect(self._update_actions)
         outer.addWidget(self.table, 1)
@@ -777,18 +782,35 @@ class MainWindow(QMainWindow):
         for i in range(len(COLUMNS)):
             self.table.setColumnHidden(i, False)
         header = self.table.horizontalHeader()
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         for i, (_, w) in enumerate(COLUMNS):
             header.resizeSection(i, w)
+        self.table.sortByColumn(-1, Qt.SortOrder.AscendingOrder)
+        self._save_column_state()
+
+    def _on_section_resized(self, logical: int, old: int, new: int) -> None:
+        header = self.table.horizontalHeader()
+        if header.sectionResizeMode(logical) != QHeaderView.ResizeMode.Interactive:
+            header.setSectionResizeMode(logical, QHeaderView.ResizeMode.Interactive)
+        self._save_column_state()
+
+    def _on_section_moved(self, logical: int, old_visual: int, new_visual: int) -> None:
+        self._save_column_state()
+
+    def _on_sort_changed(self, column: int, order) -> None:
         self._save_column_state()
 
     def _save_column_state(self) -> None:
+        header = self.table.horizontalHeader()
         visible = [not self.table.isColumnHidden(i) for i in range(len(COLUMNS))]
-        order = [
-            self.table.horizontalHeader().visualIndex(i)
-            for i in range(len(COLUMNS))
-        ]
+        order = [header.visualIndex(i) for i in range(len(COLUMNS))]
+        widths = [header.sectionSize(i) for i in range(len(COLUMNS))]
         self._settings.setValue(_SETTINGS_COL_VIS, json.dumps(visible))
         self._settings.setValue(_SETTINGS_COL_ORDER, json.dumps(order))
+        self._settings.setValue(_SETTINGS_COL_WIDTHS, json.dumps(widths))
+        sort_col = int(header.sortIndicatorSection())
+        sort_ord = int(header.sortIndicatorOrder().value)
+        self._settings.setValue(_SETTINGS_SORT, json.dumps([sort_col, sort_ord]))
 
     def _restore_column_state(self) -> None:
         vis_raw = self._settings.value(_SETTINGS_COL_VIS)
@@ -809,6 +831,27 @@ class MainWindow(QMainWindow):
                     if logical < len(COLUMNS):
                         header.moveSection(header.visualIndex(logical), visual)
             except (json.JSONDecodeError, TypeError):
+                pass
+        widths_raw = self._settings.value(_SETTINGS_COL_WIDTHS)
+        if widths_raw:
+            try:
+                widths = json.loads(widths_raw)
+                header = self.table.horizontalHeader()
+                header.setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)
+                for i, w in enumerate(widths):
+                    if i < len(COLUMNS) and w > 0:
+                        header.resizeSection(i, w)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        sort_raw = self._settings.value(_SETTINGS_SORT)
+        if sort_raw:
+            try:
+                sort_col, sort_ord = json.loads(sort_raw)
+                if 0 <= sort_col < len(COLUMNS):
+                    self.table.sortByColumn(
+                        sort_col, Qt.SortOrder(sort_ord)
+                    )
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt override
