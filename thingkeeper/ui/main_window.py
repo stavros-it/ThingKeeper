@@ -556,12 +556,12 @@ class MainWindow(QMainWindow):
                 # Overdue loan: highlight the status cell with a red background.
                 if col == 5 and it.id in overdue_loan_ids:
                     item.setBackground(QColor(DANGER_BG))
-                # Damaged item: make all text in the row red.
-                if it.status == "BROKEN":
-                    item.setForeground(QColor(DANGER))
-                # In-use item: make all text in the row blue.
-                elif it.status == "IN USE":
-                    item.setForeground(QColor(INFO))
+                # Status row coloring (skip warranty cell, which has its own smart coloring).
+                if col != 11:
+                    if it.status == "BROKEN":
+                        item.setForeground(QColor(DANGER))
+                    elif it.status == "IN USE":
+                        item.setForeground(QColor(INFO))
                 self.table.setItem(row, col, item)
         if self._first_populate:
             self.table.resizeColumnsToContents()
