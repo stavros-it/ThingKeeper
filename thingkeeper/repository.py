@@ -86,6 +86,8 @@ class Item:
             "image_path": self.image_path,
             "unit_price": self.unit_price,
             "depreciation_years": self.depreciation_years,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
         }
 
 
@@ -470,22 +472,44 @@ def bulk_insert(items: Iterable[Item]) -> int:
     count = 0
     with connect() as conn:
         for it in items:
-            cur = conn.execute(
-                """
-                INSERT INTO items
-                  (group_name, type, brand, model, info, serial, store,
-                   purchase_date, status, quantity, location, warranty_end,
-                   image_path, unit_price, depreciation_years)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                """,
-                (
-                    it.group_name, it.type, it.brand, it.model, it.info,
-                    it.serial, it.store, it.purchase_date, it.status,
-                    it.quantity, it.location, it.warranty_end,
-                    it.image_path, it.unit_price, it.depreciation_years,
-                ),
-            )
-            it.id = int(cur.lastrowid)
+            if it.id is not None:
+                cur = conn.execute(
+                    """
+                    INSERT INTO items
+                      (id, group_name, type, brand, model, info, serial, store,
+                       purchase_date, status, quantity, location, warranty_end,
+                       image_path, unit_price, depreciation_years,
+                       created_at, updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        it.id,
+                        it.group_name, it.type, it.brand, it.model, it.info,
+                        it.serial, it.store, it.purchase_date, it.status,
+                        it.quantity, it.location, it.warranty_end,
+                        it.image_path, it.unit_price, it.depreciation_years,
+                        it.created_at or None,
+                        it.updated_at or None,
+                    ),
+                )
+            else:
+                cur = conn.execute(
+                    """
+                    INSERT INTO items
+                      (group_name, type, brand, model, info, serial, store,
+                       purchase_date, status, quantity, location, warranty_end,
+                       image_path, unit_price, depreciation_years)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        it.group_name, it.type, it.brand, it.model, it.info,
+                        it.serial, it.store, it.purchase_date, it.status,
+                        it.quantity, it.location, it.warranty_end,
+                        it.image_path, it.unit_price, it.depreciation_years,
+                    ),
+                )
+            if it.id is None:
+                it.id = int(cur.lastrowid)
             count += 1
         conn.commit()
     return count

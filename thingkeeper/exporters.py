@@ -119,9 +119,10 @@ def export_excel(path: str | Path, items: list[Item] | None = None) -> Path:
     ws.title = "Inventory"
 
     headers = [
-        "GROUP", "TYPE", "BRAND", "MODEL", "INFO", "PURCHASE", "SERIAL",
-        "STORE", "STATUS", "QUANTITY", "LOCATION", "WARRANTY_END",
-        "UNIT_PRICE", "DEPRECIATION_YEARS",
+        "ID", "GROUP", "TYPE", "BRAND", "MODEL", "INFO", "PURCHASE",
+        "SERIAL", "STORE", "STATUS", "QUANTITY", "LOCATION",
+        "WARRANTY_END", "UNIT_PRICE", "DEPRECIATION_YEARS",
+        "CREATED_AT", "UPDATED_AT",
     ]
     ws.append(headers)
     header_font = Font(bold=True, color="FFFFFF")
@@ -137,10 +138,12 @@ def export_excel(path: str | Path, items: list[Item] | None = None) -> Path:
 
     for it in items:
         ws.append([
+            it.id if it.id is not None else "",
             it.group_name, it.type, it.brand, it.model, it.info,
             it.purchase_date, it.serial, it.store, it.status,
             it.quantity, it.location, it.warranty_end,
             it.unit_price, it.depreciation_years,
+            it.created_at, it.updated_at,
         ])
 
     wb.save(path)

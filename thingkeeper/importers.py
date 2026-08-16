@@ -14,6 +14,7 @@ from .repository import Item, bulk_insert, to_iso
 
 # Column header -> item field mapping for Excel import.
 EXCEL_HEADER_MAP = {
+    "ID": "id",
     "GROUP": "group_name",
     "TYPE": "type",
     "BRAND": "brand",
@@ -33,6 +34,8 @@ EXCEL_HEADER_MAP = {
     "PRICE": "unit_price",
     "DEPRECIATION_YEARS": "depreciation_years",
     "DEPRECIATION": "depreciation_years",
+    "CREATED_AT": "created_at",
+    "UPDATED_AT": "updated_at",
 }
 
 
@@ -114,8 +117,17 @@ def _record_to_item(record: dict) -> Item:
         except (ValueError, TypeError):
             return default
 
+    def _int(val, default=1) -> int:
+        try:
+            return int(val) if val not in (None, "") else default
+        except (ValueError, TypeError):
+            return default
+
+    raw_id = record.get("id")
+    item_id = _int(raw_id, None) if raw_id not in (None, "") else None
+
     return Item(
-        id=None,
+        id=item_id,
         group_name=str(record.get("group_name", "")),
         type=str(record.get("type", "")),
         brand=str(record.get("brand", "")),
@@ -126,12 +138,14 @@ def _record_to_item(record: dict) -> Item:
         purchase_date=to_iso(record.get("purchase_date", "")),
         status=str(record.get("status", config.DEFAULT_STATUS)).upper()
         or config.DEFAULT_STATUS,
-        quantity=int(record.get("quantity", 1) or 1),
+        quantity=_int(record.get("quantity", 1), 1),
         location=str(record.get("location", "")),
         warranty_end=to_iso(record.get("warranty_end", "")),
         image_path="",  # attachments restored separately
         unit_price=_float(record.get("unit_price", 0.0)),
         depreciation_years=_float(record.get("depreciation_years", 0.0)),
+        created_at=str(record.get("created_at", "") or ""),
+        updated_at=str(record.get("updated_at", "") or ""),
     )
 
 
