@@ -94,6 +94,7 @@ _DATE_FORMATS = (
     "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y",
     "%d/%m/%y", "%d-%m-%y", "%d.%m.%y",
     "%m/%d/%Y", "%m-%d-%Y",
+    "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M",
 )
 _DMY_RE = re.compile(r"^(\d{1,2})\D(\d{1,2})\D(\d{2,4})$")
 _YMD_RE = re.compile(r"^(\d{4})\D(\d{1,2})\D(\d{1,2})$")

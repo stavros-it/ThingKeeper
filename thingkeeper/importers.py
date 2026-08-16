@@ -44,9 +44,15 @@ class ImportResult:
         )
 
 
-def _clean(value) -> str:
+def _clean(value):
+    """Strip whitespace from strings; pass through dates/datetimes unchanged
+    so that to_iso() can handle them properly."""
+    from datetime import date, datetime
+
     if value is None:
         return ""
+    if isinstance(value, (date, datetime)):
+        return value
     return str(value).strip()
 
 
