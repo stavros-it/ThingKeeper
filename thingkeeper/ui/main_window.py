@@ -8,6 +8,7 @@ multi-image support.
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings, Qt, QTimer
@@ -65,8 +66,6 @@ from ..repository import (
     overdue_loan_item_ids,
     set_images,
     total_quantity,
-    warranty_expired,
-    warranty_expiring,
 )
 from .bulk_edit_dialog import BulkEditDialog
 from .integrity_dialog import IntegrityDialog
@@ -78,8 +77,11 @@ from .theme import (
     DANGER,
     DANGER_BG,
     STATUS_COLORS,
+    SUCCESS,
     TEXT,
+    TEXT_DIM,
     WARNING,
+    WARNING_BG,
 )
 from .trash_dialog import TrashDialog
 
@@ -113,6 +115,51 @@ def _fmt_date(iso: str) -> str:
         return f"{d}-{m}-{y}"
     except ValueError:
         return iso
+
+
+def _days_until(iso: str) -> int | None:
+    """Days from today until the given ISO date (negative = past)."""
+    if not iso or len(iso) < 10:
+        return None
+    try:
+        y, m, d = iso[:10].split("-")
+        target = date(int(y), int(m), int(d))
+    except ValueError:
+        return None
+    return (target - date.today()).days
+
+
+def _warranty_status(it: Item) -> tuple[str, str, str, bool, bool, bool]:
+    """Return (display_text, tooltip, fg_color, bg_color, bold, italic)
+    for the warranty cell based on the item's warranty end date."""
+    we = (it.warranty_end or "").strip()
+    if not we:
+        return ("", "No warranty", TEXT_DIM, "", False, True)
+    days = _days_until(we)
+    if days is None:
+        return (_fmt_date(we), "", TEXT, "", False, False)
+    disp = _fmt_date(we)
+    if days < 0:
+        abs_d = -days
+        unit = "year" if abs_d >= 365 else "month" if abs_d >= 30 else "day"
+        n = abs_d // 365 if unit == "year" else abs_d // 30 if unit == "month" else abs_d
+        tip = f"Expired {n} {unit}{'s' if n != 1 else ''} ago"
+        return (disp, tip, DANGER, DANGER_BG, True, False)
+    if days == 0:
+        return (disp, "Expires today", WARNING, WARNING_BG, True, False)
+    if days <= config.WARRANTY_SOON_DAYS:
+        tip = f"{days} day{'s' if days != 1 else ''} left"
+        return (disp, tip, WARNING, WARNING_BG, False, False)
+    years = days // 365
+    months = (days % 365) // 30
+    if years >= 1:
+        tip = f"{years}y {months}m left" if months else f"{years}y left"
+    elif months >= 1:
+        tip = f"{months}m left"
+    else:
+        tip = f"{days} days left"
+    return (disp, tip, SUCCESS, "", False, False)
+
 _SETTINGS_COL_ORDER = "columns/order"
 _MAX_RECENT = 8
 
@@ -454,11 +501,10 @@ class MainWindow(QMainWindow):
     def _populate_table(self, items: list[Item]) -> None:
         self.table.setSortingEnabled(False)
         self.table.setRowCount(len(items))
-        expired_ids = {it.id for it in warranty_expired()}
-        soon_ids = {it.id for it in warranty_expiring()}
         overdue_loan_ids = overdue_loan_item_ids()
 
         for row, it in enumerate(items):
+            w_disp, w_tip, w_fg, w_bg, w_bold, w_italic = _warranty_status(it)
             cells = [
                 str(it.id) if it.id is not None else "",
                 it.group_name,
@@ -470,7 +516,7 @@ class MainWindow(QMainWindow):
                 str(it.quantity),
                 it.location,
                 _fmt_date(it.purchase_date),
-                _fmt_date(it.warranty_end),
+                w_disp,
                 it.store,
             ]
             for col, value in enumerate(cells):
@@ -487,13 +533,17 @@ class MainWindow(QMainWindow):
                     f = item.font()
                     f.setBold(True)
                     item.setFont(f)
-                if col == 10 and it.id in expired_ids:
-                    item.setForeground(QColor(DANGER))
+                if col == 10:
+                    item.setForeground(QColor(w_fg))
+                    if w_bg:
+                        item.setBackground(QColor(w_bg))
                     f = item.font()
-                    f.setBold(True)
+                    f.setBold(w_bold)
+                    f.setItalic(w_italic)
                     item.setFont(f)
-                elif col == 10 and it.id in soon_ids:
-                    item.setForeground(QColor(WARNING))
+                    if w_tip:
+                        item.setToolTip(w_tip)
+                    item.setData(Qt.ItemDataRole.UserRole, it.warranty_end or "")
                 # Overdue loan: highlight the status cell with a red background.
                 if col == 6 and it.id in overdue_loan_ids:
                     item.setBackground(QColor(DANGER_BG))
