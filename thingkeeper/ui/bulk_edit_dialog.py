@@ -60,10 +60,10 @@ class BulkEditDialog(QDialog):
         form.addRow("New value:", self.value_widget)
 
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Apply
+            QDialogButtonBox.StandardButton.Ok
             | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.button(QDialogButtonBox.StandardButton.Apply).setText("Apply")
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Apply")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
 
