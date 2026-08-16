@@ -555,6 +555,9 @@ class MainWindow(QMainWindow):
                 # Overdue loan: highlight the status cell with a red background.
                 if col == 7 and it.id in overdue_loan_ids:
                     item.setBackground(QColor(DANGER_BG))
+                # Damaged item: make all text in the row red.
+                if it.status == "BROKEN":
+                    item.setForeground(QColor(DANGER))
                 self.table.setItem(row, col, item)
         if self._first_populate:
             self.table.resizeColumnsToContents()
