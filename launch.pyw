@@ -1,4 +1,4 @@
-#!/usr/bin/env pythonw
+#!/usr/bin/env python3
 """ThingKeeper launcher - runs the app without a console window.
 
 On Windows, the .pyw extension uses pythonw.exe so no terminal appears.
