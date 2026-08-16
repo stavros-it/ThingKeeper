@@ -89,7 +89,7 @@ class BarChartWidget(pg.PlotWidget):
         for i, lbl in enumerate(labels):
             wrapped = _wrap_label(lbl)
             txt = pg.TextItem(wrapped, color=TEXT, anchor=(0.5, 0))
-            txt.setFont(QFont("Segoe UI", 8))
+            txt.setFont(QFont("Segoe UI", 6))
             txt.setPos(i, -label_space * 0.05)
             self.addItem(txt)
 
