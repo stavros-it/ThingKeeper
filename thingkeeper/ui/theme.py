@@ -191,13 +191,13 @@ QAbstractScrollArea QScrollBar:horizontal {{
     border-top: 1px solid {BORDER};
 }}
 QScrollBar::handle {{
-    background: {BG_BUTTON};
+    background: #5a5a5a;
     border: 2px solid {BG_BASE};
     border-radius: 4px;
     min-height: 24px;
     min-width: 24px;
 }}
-QScrollBar::handle:hover {{ background: {BG_BUTTON_HOVER}; }}
+QScrollBar::handle:hover {{ background: #707070; }}
 QScrollBar::handle:pressed {{ background: {ACCENT}; }}
 QScrollBar::sub-line, QScrollBar::add-line {{
     border: none; background: none; height: 0; width: 0;
