@@ -155,7 +155,7 @@ ThingKeeper/
 ├── README.md                    # user-facing docs
 ├── ROADMAP.md                   # development roadmap
 ├── PROJECT_CONTEXT.md           # this file
-├── LICENSE                      # MIT
+├── LICENSE                      # Proprietary
 ├── .gitignore
 └── thingkeeper/
     ├── __init__.py              # version
@@ -359,4 +359,4 @@ This is the pattern used by the smoke tests run during the initial build.
 
 ## 12. License
 
-MIT. See [LICENSE](LICENSE).
+Proprietary (© 2026 Stavros Antoniou, all rights reserved). See [LICENSE](LICENSE).

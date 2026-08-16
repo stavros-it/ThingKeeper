@@ -490,7 +490,7 @@ class MainWindow(QMainWindow):
             self, f"About {config.APP_NAME}",
             f"<h3>{config.APP_NAME} {config.APP_VERSION}</h3>"
             "<p>Desktop inventory app for gadgets, appliances and hardware parts.</p>"
-            "<p>PyQt6 + SQLite. Licensed under the MIT License.</p>"
+            "<p>PyQt6 + SQLite. Proprietary license (© 2026 Stavros Antoniou).</p>"
         )
 
     def keyPressEvent(self, event) -> None:  # noqa: N802 - Qt override

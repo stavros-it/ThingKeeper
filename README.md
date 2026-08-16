@@ -98,10 +98,11 @@ ThingKeeper/
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Proprietary (© 2026 Stavros Antoniou, all rights reserved) — see [LICENSE](LICENSE).
 
 ## Project docs
 
+- [AGENTS.md](AGENTS.md) — workflow and conventions for AI assistants and contributors.
 - [ROADMAP.md](ROADMAP.md) — what's shipped, what's planned, what's dropped.
 - [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) — architecture, data model and
   design decisions for contributors.
