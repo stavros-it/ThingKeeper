@@ -76,7 +76,8 @@ class BarChart(QWidget):
         self._max_bar_h = 32
         self._gap = 4
         rows = max(len(data), 1)
-        self.setMinimumHeight(rows * (self._min_bar_h + self._gap) + 4)
+        capped_rows = min(rows, 20)
+        self.setMinimumHeight(capped_rows * (self._min_bar_h + self._gap) + 4)
         self.setMinimumWidth(320)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 

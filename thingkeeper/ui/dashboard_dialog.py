@@ -231,14 +231,16 @@ class DashboardDialog(QDialog):
 
         cg = counts_by("type")
         if cg:
-            chart = BarChart(cg, color=SUCCESS)
+            cg_sorted = sorted(cg, key=lambda x: x[1], reverse=True)[:15]
+            chart = BarChart(cg_sorted, color=SUCCESS)
             chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-            sections.append(("Items by type", chart))
+            sections.append(("Items by type (top 15)", chart))
 
         bg = counts_by("brand")
         if bg:
-            chart = BarChart(bg, color="#fbbf24")
+            bg_sorted = sorted(bg, key=lambda x: x[1], reverse=True)[:15]
+            chart = BarChart(bg_sorted, color="#fbbf24")
             chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-            sections.append(("Items by brand", chart))
+            sections.append(("Items by brand (top 15)", chart))
 
         self._place_sections(sections)
