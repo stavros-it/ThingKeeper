@@ -98,6 +98,7 @@ COLUMNS = [
     ("Purchase", 100),
     ("Warranty", 100),
     ("Store", 100),
+    ("Comments", 200),
 ]
 
 _SETTINGS_FILTERS = "filters/saved"
@@ -523,6 +524,7 @@ class MainWindow(QMainWindow):
                 _fmt_date(it.purchase_date),
                 w_disp,
                 it.store,
+                it.info,
             ]
             for col, value in enumerate(cells):
                 item = QTableWidgetItem(value)
