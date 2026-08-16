@@ -87,17 +87,20 @@ def test_import_csv_skips_blank_rows(repo, tmp_path):
 
 def test_import_excel_real_file(repo, excel_path):
     result = import_excel(excel_path)
-    assert result.imported == 406
-    assert len(list_items()) == 406
+    assert result.imported == 5
+    assert len(list_items()) == 5
 
 
 def test_import_excel_fields_parsed(repo, excel_path):
     import_excel(excel_path)
     items = list_items()
-    assert len(items) == 406
-    # At least the group/type columns should be populated for most items.
-    assert sum(1 for it in items if it.group_name) > 300
-    assert sum(1 for it in items if it.type) > 300
+    assert len(items) == 5
+    # The group/type columns should be populated for all items.
+    assert all(it.group_name for it in items)
+    assert all(it.type for it in items)
+    # unit_price and depreciation should have been parsed.
+    priced = [it for it in items if it.unit_price and it.unit_price > 0]
+    assert len(priced) == 5
 
 
 # ----------------------------------------------------------- archives

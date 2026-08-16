@@ -15,7 +15,7 @@ grouped by horizon, not by version. Priorities may shift based on real usage.
 
 ## v0.1 — Foundation (Done)
 
-**Goal:** replace the original *My Equipment.xlsx* spreadsheet with a
+**Goal:** replace a personal inventory spreadsheet with a
 maintainable desktop app.
 
 - PyQt6 desktop UI (table, filters, search, status bar)

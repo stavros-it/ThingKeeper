@@ -105,12 +105,39 @@ def sample_item():
 
 
 @pytest.fixture
-def excel_path():
-    """Path to the test Excel file (406 rows). Skips if missing."""
-    p = Path("My Equipment.xlsx")
-    if not p.exists():
-        pytest.skip("My Equipment.xlsx not available")
-    return p
+def excel_path(tmp_path):
+    """Generate a small sample .xlsx workbook matching the expected column layout.
+
+    This replaces the original dependency on a personal spreadsheet. The
+    generated file has the same headers the importer expects (GROUP, TYPE,
+    BRAND, MODEL, SERIAL, etc.) and a handful of rows for testing.
+    """
+    import openpyxl
+
+    path = tmp_path / "sample_inventory.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append([
+        "GROUP", "TYPE", "BRAND", "MODEL", "INFO",
+        "PURCHASE", "SERIAL", "STORE", "STATUS", "QUANTITY",
+        "UNIT_PRICE", "DEPRECIATION_YEARS",
+    ])
+    rows = [
+        ("IT", "laptop", "Dell", "XPS 13", "Notes A",
+         "2024-01-15", "S-001", "Amazon", "AVAILABLE", 1, 1500, 5),
+        ("IT", "laptop", "HP", "EliteBook 840", "Notes B",
+         "2023-06-01", "S-002", "HP Store", "IN USE", 1, 1200, 4),
+        ("AV", "monitor", "LG", "27UP850", "4K display",
+         "2024-03-10", "S-003", "Newegg", "AVAILABLE", 2, 450, 6),
+        ("IT", "phone", "Samsung", "Galaxy S24", "",
+         "2024-02-20", "S-004", "Samsung", "IN USE", 1, 800, 3),
+        ("TOOLS", "drill", "Bosch", "GSB 13 RE", "Impact drill",
+         "2022-09-05", "S-005", "Bauhaus", "AVAILABLE", 1, 120, 7),
+    ]
+    for row in rows:
+        ws.append(list(row))
+    wb.save(path)
+    return path
 
 
 class _FakeMessageBox:

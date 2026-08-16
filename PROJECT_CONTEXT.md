@@ -19,17 +19,16 @@ one SQLite file plus an attachments folder on their own machine.
 
 ### Origin
 
-The project was seeded from a real spreadsheet, `My Equipment.xlsx`, containing
-406 inventory items across 10 groups (COMMUNICATION, ENTERTAINMENT, GADGET, IT,
-NETWORK, OUTDOOR, SMART HOME, SURVEILANCE, TOOL, WHITE) with the column layout:
+The project was built to replace a personal inventory spreadsheet. The
+expected Excel column layout is:
 
 ```
 GROUP | TYPE | BRAND | MODEL | INFO | PURCHASE | SERIAL | STORE
 ```
 
-The first release exists to replace that spreadsheet without losing any data.
-The original `.xlsx` is deliberately git-ignored because it contains the
-owner's personal inventory.
+Use **File → Import → Excel** to load any `.xlsx` file with these headers.
+The original spreadsheet is deliberately git-ignored because it contains
+the owner's personal inventory.
 
 ---
 
@@ -378,7 +377,7 @@ then; threading would complicate every import path for no current benefit.
 - Default branch: `main`.
 - Commit messages: imperative mood, short subject, optional body
   explaining the *why*.
-- The `My Equipment.xlsx` source spreadsheet and `data/` are git-ignored.
+- Any personal inventory spreadsheets and `data/` are git-ignored.
 
 ---
 
@@ -423,7 +422,7 @@ os.environ['THINGKEEPER_DATA'] = tempfile.mkdtemp()
 
 import thingkeeper.config, thingkeeper.database, thingkeeper.importers
 thingkeeper.database.init_db()
-thingkeeper.importers.import_excel('My Equipment.xlsx')
+thingkeeper.importers.import_excel('your_inventory.xlsx')
 
 from thingkeeper.repository import list_items
 print(len(list_items()), 'items')
@@ -455,8 +454,8 @@ This is the pattern used by the smoke tests run during the initial build.
 
 - No concurrency between processes — SQLite WAL allows one writer at a time.
   Running two instances on the same DB file simultaneously is unsupported.
-- `My Equipment.xlsx` itself is not in the repo; the maintainer keeps it
-  locally and imports via **File → Import → Excel**.
+- No bundled sample data — users import their own inventory via
+  **File → Import → Excel**.
 
 ---
 

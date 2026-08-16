@@ -65,7 +65,7 @@ git diff --cached --name-only
 Local-only, git-ignored files that must never be committed:
 - `data/thingkeeper.db` (your inventory) — gitignored, local-only
 - `data/attachments/` (item images) — gitignored, local-only
-- `My Equipment.xlsx` (source spreadsheet with personal data) — gitignored, local-only
+- `My Equipment*.xlsx` (personal inventory spreadsheets) — gitignored, local-only
 - `*.tkz`, `*.csv`, `*.pdf`, `*.log` (export artifacts) — gitignored
 
 If any of these appear in `git ls-files`, **do not push** — fix `.gitignore`

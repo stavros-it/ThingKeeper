@@ -12,7 +12,7 @@ from pathlib import Path
 from . import config
 from .repository import Item, bulk_insert, to_iso
 
-# Column header -> item field mapping for the original "My Equipment.xlsx".
+# Column header -> item field mapping for Excel import.
 EXCEL_HEADER_MAP = {
     "GROUP": "group_name",
     "TYPE": "type",
@@ -51,7 +51,7 @@ def _clean(value) -> str:
 
 
 def import_excel(path: str | Path) -> ImportResult:
-    """Import items from an .xlsx workbook (original My Equipment layout)."""
+    """Import items from an .xlsx workbook."""
     import openpyxl
 
     wb = openpyxl.load_workbook(path, data_only=True)

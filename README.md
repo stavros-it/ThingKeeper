@@ -90,7 +90,7 @@ local and private.
 
 ## Importing your existing spreadsheet
 
-Use **File → Import → Excel (.xlsx)** and pick your `My Equipment.xlsx`. The columns
+Use **File → Import → Excel (.xlsx)** and pick your spreadsheet. The columns
 `GROUP, TYPE, BRAND, MODEL, INFO, PURCHASE, SERIAL, STORE` are mapped automatically;
 new fields default to sensible values (status `AVAILABLE`, quantity `1`).
 
