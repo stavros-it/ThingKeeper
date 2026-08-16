@@ -188,6 +188,11 @@ class PieChartWidget(QWidget):
         self._values = values
         self.update()
 
+    def _color_for(self, i: int, label: str) -> str:
+        if label in STATUS_COLORS:
+            return STATUS_COLORS[label]
+        return _PALETTE[i % len(_PALETTE)]
+
     def paintEvent(self, _event) -> None:  # noqa: N802 - Qt override
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -210,7 +215,7 @@ class PieChartWidget(QWidget):
         angle = 90.0
         for i, val in enumerate(self._values):
             span = (val / total) * 360.0
-            color = QColor(_PALETTE[i % len(_PALETTE)])
+            color = QColor(self._color_for(i, self._labels[i]))
             painter.setBrush(color)
             painter.setPen(QPen(Qt.PenStyle.NoPen))
             painter.drawPie(
@@ -230,8 +235,9 @@ class PieChartWidget(QWidget):
         painter.setFont(font)
         legend_y = cy + int(radius) + 15
         line_h = 16
-        cols = max(1, math.ceil(len(self._labels) / 4))
-        per_col = math.ceil(len(self._labels) / cols)
+        n = len(self._labels)
+        cols = max(1, math.ceil(n / 4))
+        per_col = math.ceil(n / cols)
         for i, label in enumerate(self._labels):
             col = i // per_col
             row = i % per_col
@@ -239,7 +245,8 @@ class PieChartWidget(QWidget):
             y = legend_y + row * line_h
             if y > h - line_h:
                 continue
-            painter.setBrush(QColor(_PALETTE[i % len(_PALETTE)]))
+            color_hex = self._color_for(i, label)
+            painter.setBrush(QColor(color_hex))
             painter.setPen(QPen(Qt.PenStyle.NoPen))
             painter.drawRect(x, y + 2, 10, 10)
             painter.setPen(QColor(TEXT))
