@@ -96,6 +96,7 @@ COLUMNS = [
     ("Comments", 200),
     ("Serial", 140),
     ("Qty", 50),
+    ("Value", 90),
     ("Location", 120),
     ("Purchase", 100),
     ("Warranty", 100),
@@ -522,6 +523,7 @@ class MainWindow(QMainWindow):
                 it.info,
                 it.serial,
                 str(it.quantity),
+                f"{it.unit_price * it.quantity:,.2f}" if it.unit_price else "",
                 it.location,
                 _fmt_date(it.purchase_date),
                 w_disp,
@@ -529,11 +531,11 @@ class MainWindow(QMainWindow):
             ]
             for col, value in enumerate(cells):
                 item = QTableWidgetItem(value)
-                if col in (0, 8):
+                if col in (0, 8, 9):
                     item.setData(Qt.ItemDataRole.DisplayRole, value)
                     item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     try:
-                        item.setData(Qt.ItemDataRole.UserRole, int(value))
+                        item.setData(Qt.ItemDataRole.UserRole, float(value.replace(",", "")))
                     except (ValueError, TypeError):
                         pass
                 if col == 5:
@@ -542,7 +544,7 @@ class MainWindow(QMainWindow):
                     f = item.font()
                     f.setBold(True)
                     item.setFont(f)
-                if col == 11:
+                if col == 12:
                     item.setForeground(QColor(w_fg))
                     if w_bg:
                         item.setBackground(QColor(w_bg))
@@ -557,7 +559,7 @@ class MainWindow(QMainWindow):
                 if col == 5 and it.id in overdue_loan_ids:
                     item.setBackground(QColor(DANGER_BG))
                 # Status row coloring (skip warranty cell, which has its own smart coloring).
-                if col != 11:
+                if col != 12:
                     if it.status == "BROKEN":
                         item.setForeground(QColor(DANGER))
                     elif it.status == "IN USE":
