@@ -48,6 +48,7 @@ from ..repository import (
     distinct_values,
     get_item,
     list_items,
+    overdue_loan_item_ids,
     set_images,
     total_quantity,
     warranty_expired,
@@ -244,6 +245,19 @@ class MainWindow(QMainWindow):
         self.act_trash.triggered.connect(self.show_trash)
         tb.addAction(self.act_trash)
 
+        self.act_loan = QAction("Loan", self)
+        self.act_loan.setShortcut("Ctrl+L")
+        self.act_loan.triggered.connect(self.loan_selected)
+        tb.addAction(self.act_loan)
+
+        self.act_loans = QAction("Loans", self)
+        self.act_loans.triggered.connect(self.show_loans)
+        tb.addAction(self.act_loans)
+
+        self.act_contacts = QAction("Contacts", self)
+        self.act_contacts.triggered.connect(self.show_contacts)
+        tb.addAction(self.act_contacts)
+
         self.act_report = QAction("Report", self)
         self.act_report.triggered.connect(self.generate_report)
         tb.addAction(self.act_report)
@@ -297,6 +311,13 @@ class MainWindow(QMainWindow):
         self._add_action(view_menu, "&Trash…", self.show_trash)
         view_menu.addSeparator()
         self._add_action(view_menu, "&Columns…", self._show_column_menu_at_zero)
+
+        loans_menu = mb.addMenu("&Loans")
+        self._add_action(loans_menu, "&Loan selected item…", self.loan_selected, "Ctrl+L")
+        self._add_action(loans_menu, "&All loans…", self.show_loans)
+        loans_menu.addSeparator()
+        self._add_action(loans_menu, "&Contacts…", self.show_contacts)
+        self._add_action(loans_menu, "Loan &history for selected…", self.show_loan_history)
 
         help_menu = mb.addMenu("&Help")
         self._add_action(help_menu, "&About", self._about)
@@ -365,6 +386,7 @@ class MainWindow(QMainWindow):
         self.table.setRowCount(len(items))
         expired_ids = {it.id for it in warranty_expired()}
         soon_ids = {it.id for it in warranty_expiring()}
+        overdue_loan_ids = overdue_loan_item_ids()
 
         for row, it in enumerate(items):
             cells = [
@@ -402,6 +424,9 @@ class MainWindow(QMainWindow):
                     item.setFont(f)
                 elif col == 10 and it.id in soon_ids:
                     item.setForeground(QColor("#9a6a00"))
+                # Overdue loan: highlight the status cell with a red background.
+                if col == 6 and it.id in overdue_loan_ids:
+                    item.setBackground(QColor("#ffe0e0"))
                 self.table.setItem(row, col, item)
         self.table.setSortingEnabled(True)
         self._update_actions()
@@ -412,6 +437,7 @@ class MainWindow(QMainWindow):
         self.act_edit.setEnabled(has_selection)
         self.act_delete.setEnabled(has_selection)
         self.act_duplicate.setEnabled(has_selection)
+        self.act_loan.setEnabled(has_selection)
         self.act_bulk_edit.setEnabled(has_selection)
 
     def _update_undo_actions(self) -> None:
@@ -531,6 +557,56 @@ class MainWindow(QMainWindow):
         dlg = TrashDialog(self)
         dlg.exec()
         self.refresh()
+
+    def loan_selected(self) -> None:
+        items = self._selected_items()
+        if not items:
+            QMessageBox.information(
+                self, "Loan", "Select an item to loan out first."
+            )
+            return
+        from ..repository import active_loan_for_item, open_loan
+        from .loan_dialog import LoanDialog
+        for it in items:
+            active = active_loan_for_item(it.id) if it.id is not None else None
+            if active is not None:
+                QMessageBox.warning(
+                    self, "Already on loan",
+                    f"Item #{it.id} is already on loan to {active.borrower} "
+                    f"(since {active.loaned_on}).",
+                )
+                continue
+            dlg = LoanDialog(self, item=it)
+            if dlg.exec() == LoanDialog.DialogCode.Accepted:
+                open_loan(
+                    it.id,
+                    borrower=dlg.borrower(),
+                    contact_id=dlg.contact_id(),
+                    due_on=dlg.due_on(),
+                    notes=dlg.notes(),
+                )
+            else:
+                break
+        self.refresh()
+
+    def show_loans(self) -> None:
+        from .loans_dialog import LoansDialog
+        LoansDialog(self).exec()
+        self.refresh()
+
+    def show_contacts(self) -> None:
+        from .contacts_dialog import ContactsDialog
+        ContactsDialog(self).exec()
+
+    def show_loan_history(self) -> None:
+        items = self._selected_items()
+        if not items:
+            QMessageBox.information(self, "Loan history", "Select an item first.")
+            return
+        it = items[0]
+        from .loan_history_dialog import LoanHistoryDialog
+        label = f"#{it.id} {(it.brand + ' ' + it.model).strip() or it.serial}"
+        LoanHistoryDialog(it.id, label, self).exec()
 
     def generate_report(self) -> None:
         ReportsDialog(self).exec()

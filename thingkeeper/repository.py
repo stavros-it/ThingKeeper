@@ -468,3 +468,304 @@ def duplicate_item(item_id: int, new_serial: str = "") -> int:
     for _img_id, path in list_images(item_id):
         add_image(new_id, path)
     return new_id
+
+
+# ----------------------------------------------------------------- contacts
+
+@dataclass(slots=True)
+class Contact:
+    id: int | None = None
+    name: str = ""
+    phone: str = ""
+    email: str = ""
+    notes: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+    @classmethod
+    def from_row(cls, row: sqlite3.Row) -> Contact:
+        return cls(
+            id=row["id"],
+            name=row["name"] or "",
+            phone=row["phone"] or "",
+            email=row["email"] or "",
+            notes=row["notes"] or "",
+            created_at=row["created_at"] or "",
+            updated_at=row["updated_at"] or "",
+        )
+
+    def as_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "phone": self.phone,
+            "email": self.email,
+            "notes": self.notes,
+        }
+
+
+def create_contact(contact: Contact) -> int:
+    with connect() as conn:
+        cur = conn.execute(
+            "INSERT INTO contacts (name, phone, email, notes) VALUES (?, ?, ?, ?)",
+            (contact.name, contact.phone, contact.email, contact.notes),
+        )
+        conn.commit()
+        contact.id = int(cur.lastrowid)
+        return contact.id
+
+
+def update_contact(contact: Contact) -> None:
+    if contact.id is None:
+        raise ValueError("Contact id is required for update")
+    with connect() as conn:
+        conn.execute(
+            "UPDATE contacts SET name=?, phone=?, email=?, notes=?, "
+            "updated_at=datetime('now') WHERE id=?",
+            (contact.name, contact.phone, contact.email, contact.notes, contact.id),
+        )
+        conn.commit()
+
+
+def delete_contact(contact_id: int) -> None:
+    with connect() as conn:
+        conn.execute("DELETE FROM contacts WHERE id=?", (contact_id,))
+        conn.commit()
+
+
+def get_contact(contact_id: int) -> Contact | None:
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM contacts WHERE id=?", (contact_id,)
+        ).fetchone()
+    return Contact.from_row(row) if row else None
+
+
+def list_contacts(search: str = "") -> list[Contact]:
+    with connect() as conn:
+        if search:
+            like = f"%{search.lower()}%"
+            rows = conn.execute(
+                "SELECT * FROM contacts "
+                "WHERE LOWER(COALESCE(name,'')) LIKE ? "
+                "OR LOWER(COALESCE(phone,'')) LIKE ? "
+                "OR LOWER(COALESCE(email,'')) LIKE ? "
+                "ORDER BY name",
+                (like, like, like),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM contacts ORDER BY name"
+            ).fetchall()
+    return [Contact.from_row(r) for r in rows]
+
+
+# -------------------------------------------------------------------- loans
+
+@dataclass(slots=True)
+class Loan:
+    id: int | None = None
+    item_id: int | None = None
+    contact_id: int | None = None
+    borrower: str = ""
+    loaned_on: str = ""
+    due_on: str = ""
+    returned_on: str = ""
+    notes: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+    @classmethod
+    def from_row(cls, row: sqlite3.Row) -> Loan:
+        return cls(
+            id=row["id"],
+            item_id=row["item_id"],
+            contact_id=row["contact_id"],
+            borrower=row["borrower"] or "",
+            loaned_on=row["loaned_on"] or "",
+            due_on=row["due_on"] or "",
+            returned_on=row["returned_on"] or "",
+            notes=row["notes"] or "",
+            created_at=row["created_at"] or "",
+            updated_at=row["updated_at"] or "",
+        )
+
+    def as_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "item_id": self.item_id,
+            "contact_id": self.contact_id,
+            "borrower": self.borrower,
+            "loaned_on": self.loaned_on,
+            "due_on": self.due_on,
+            "returned_on": self.returned_on,
+            "notes": self.notes,
+        }
+
+    @property
+    def is_open(self) -> bool:
+        return not self.returned_on
+
+    @property
+    def is_overdue(self) -> bool:
+        if not self.is_open or not self.due_on:
+            return False
+        return self.due_on < date.today().isoformat()
+
+
+def open_loan(
+    item_id: int,
+    borrower: str,
+    contact_id: int | None = None,
+    due_on: str = "",
+    notes: str = "",
+) -> int:
+    """Open a new loan for an item and mark the item as LOANED.
+
+    Saves the item's previous status so it can be restored on return.
+    """
+    today = date.today().isoformat()
+    item = get_item(item_id)
+    if item is None:
+        raise ValueError(f"Item {item_id} not found")
+    prev_status = item.status
+    with connect() as conn:
+        cur = conn.execute(
+            """
+            INSERT INTO loans
+                (item_id, contact_id, borrower, loaned_on, due_on, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (item_id, contact_id, borrower, today, due_on or "", notes),
+        )
+        loan_id = int(cur.lastrowid)
+        if prev_status != "LOANED":
+            conn.execute(
+                "UPDATE items SET status='LOANED', info=COALESCE(info,'') || ? "
+                "WHERE id=?",
+                (f"\n[Previous status: {prev_status}]", item_id),
+            )
+        conn.commit()
+    return loan_id
+
+
+def return_loan(loan_id: int, notes: str = "") -> None:
+    """Mark a loan as returned and restore the item's previous status."""
+    today = date.today().isoformat()
+    with connect() as conn:
+        loan_row = conn.execute(
+            "SELECT * FROM loans WHERE id=?", (loan_id,)
+        ).fetchone()
+        if loan_row is None:
+            raise ValueError(f"Loan {loan_id} not found")
+        if loan_row["returned_on"]:
+            return
+        conn.execute(
+            "UPDATE loans SET returned_on=?, notes=COALESCE(notes,'') || ?, "
+            "updated_at=datetime('now') WHERE id=?",
+            (today, f"\n{returned_note(notes)}" if notes else "", loan_id),
+        )
+        item = conn.execute(
+            "SELECT * FROM items WHERE id=?", (loan_row["item_id"],)
+        ).fetchone()
+        if item is not None:
+            new_status = extract_previous_status(item["info"] or "")
+            if not new_status:
+                new_status = "AVAILABLE"
+            new_info = strip_previous_status(item["info"] or "")
+            conn.execute(
+                "UPDATE items SET status=?, info=?, updated_at=datetime('now') "
+                "WHERE id=?",
+                (new_status, new_info, item["id"]),
+            )
+        conn.commit()
+
+
+def returned_note(extra: str) -> str:
+    return f"[Returned: {date.today().isoformat()}] {extra}".strip()
+
+
+def extract_previous_status(info: str) -> str:
+    """Pull the previous status marker out of an item's info field."""
+    import re
+    m = re.search(r"\[Previous status:\s*([A-Z ]+)\]", info)
+    return m.group(1).strip() if m else ""
+
+
+def strip_previous_status(info: str) -> str:
+    """Remove the previous-status marker line from an item's info field."""
+    import re
+    cleaned = re.sub(r"\n?\[Previous status:\s*[A-Z ]+\]", "", info)
+    return cleaned.strip()
+
+
+def get_loan(loan_id: int) -> Loan | None:
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM loans WHERE id=?", (loan_id,)).fetchone()
+    return Loan.from_row(row) if row else None
+
+
+def list_loans(
+    open_only: bool = False,
+    overdue_only: bool = False,
+    item_id: int | None = None,
+) -> list[Loan]:
+    clauses: list[str] = []
+    params: list = []
+    if open_only:
+        clauses.append("returned_on IS NULL")
+    if overdue_only:
+        clauses.append("returned_on IS NULL")
+        clauses.append("due_on <> ''")
+        clauses.append("due_on < ?")
+        params.append(date.today().isoformat())
+    if item_id is not None:
+        clauses.append("item_id = ?")
+        params.append(item_id)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    sql = f"SELECT * FROM loans{where} ORDER BY loaned_on DESC, id DESC"
+    with connect() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [Loan.from_row(r) for r in rows]
+
+
+def list_item_loans(item_id: int) -> list[Loan]:
+    return list_loans(item_id=item_id)
+
+
+def active_loan_for_item(item_id: int) -> Loan | None:
+    """Return the open loan for an item, if any."""
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM loans WHERE item_id=? AND returned_on IS NULL "
+            "ORDER BY id DESC LIMIT 1",
+            (item_id,),
+        ).fetchone()
+    return Loan.from_row(row) if row else None
+
+
+def overdue_loan_item_ids() -> set[int]:
+    """Return the set of item_ids with at least one overdue open loan."""
+    today = date.today().isoformat()
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT item_id FROM loans "
+            "WHERE returned_on IS NULL AND due_on <> '' AND due_on < ?",
+            (today,),
+        ).fetchall()
+    return {r["item_id"] for r in rows}
+
+
+def on_loan_item_ids() -> set[int]:
+    """Return the set of item_ids with at least one open loan."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT item_id FROM loans WHERE returned_on IS NULL"
+        ).fetchall()
+    return {r["item_id"] for r in rows}
+
+
+def delete_loan(loan_id: int) -> None:
+    with connect() as conn:
+        conn.execute("DELETE FROM loans WHERE id=?", (loan_id,))
+        conn.commit()

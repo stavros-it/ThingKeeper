@@ -21,6 +21,10 @@ single-file storage.
 - **Saved filter presets** — name and recall filter combinations.
 - **Column show/hide & reorder** — right-click the table header, drag columns to reorder.
 - **Serial / barcode scan** — keyboard-wedge USB scanner support.
+- **Loan tracking** — loan items to contacts, set due dates, one-click return;
+  overdue loans are highlighted in the main table.
+- **Contacts** — manage a list of contacts (name, phone, email, notes) for loans.
+- **Loan history** — view the full loan history for any item.
 - **Import** — Excel (`.xlsx`), compressed JSON archive (`.tkz`), CSV (`.csv`).
 - **Export** — `.tkz` (with attachments), CSV, Excel, PDF report.
 - **Recent files** — recently imported/exported files listed in the File menu.
@@ -70,6 +74,7 @@ new fields default to sensible values (status `AVAILABLE`, quantity `1`).
 | Undo              | `Ctrl+Z`        |
 | Redo              | `Ctrl+Y`        |
 | Bulk edit         | `Ctrl+B`        |
+| Loan item         | `Ctrl+L`        |
 | Scan serial       | `Ctrl+K`        |
 | Search            | `Ctrl+F`        |
 | Generate report   | `Ctrl+R`        |
@@ -97,6 +102,10 @@ ThingKeeper/
 │       ├── main_window.py       # table, filters, toolbar, undo/redo, saved filters
 │       ├── item_dialog.py       # add/edit (multi-image gallery + drag-and-drop)
 │       ├── bulk_edit_dialog.py  # bulk field change
+│       ├── loan_dialog.py       # open a loan for an item
+│       ├── loans_dialog.py      # browse loans, return items
+│       ├── loan_history_dialog.py  # loan history per item
+│       ├── contacts_dialog.py   # manage contacts
 │       ├── scan_dialog.py       # serial scan
 │       ├── trash_dialog.py      # view / restore / purge deleted items
 │       └── reports_dialog.py    # PDF report

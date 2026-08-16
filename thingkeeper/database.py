@@ -42,6 +42,29 @@ CREATE TABLE IF NOT EXISTS schema_version (
     applied TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS contacts (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    phone      TEXT,
+    email      TEXT,
+    notes      TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS loans (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id      INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    contact_id   INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+    borrower     TEXT NOT NULL,
+    loaned_on    TEXT NOT NULL DEFAULT (date('now')),
+    due_on       TEXT,
+    returned_on  TEXT,
+    notes        TEXT,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_items_group   ON items(group_name);
 CREATE INDEX IF NOT EXISTS idx_items_type    ON items(type);
 CREATE INDEX IF NOT EXISTS idx_items_brand   ON items(brand);
@@ -49,10 +72,13 @@ CREATE INDEX IF NOT EXISTS idx_items_status  ON items(status);
 CREATE INDEX IF NOT EXISTS idx_items_serial  ON items(serial);
 CREATE INDEX IF NOT EXISTS idx_items_deleted ON items(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_images_item   ON item_images(item_id);
+CREATE INDEX IF NOT EXISTS idx_loans_item    ON loans(item_id);
+CREATE INDEX IF NOT EXISTS idx_loans_contact ON loans(contact_id);
+CREATE INDEX IF NOT EXISTS idx_loans_open    ON loans(returned_on);
 """
 
 # Latest schema version. Bump when adding a migration.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 4
 
 
 def _column_exists(conn: sqlite3.Connection, table: str, column: str) -> bool:
@@ -68,14 +94,14 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
 
 
 def _migration_1_add_deleted_at(conn: sqlite3.Connection) -> None:
-    """v1 -> v2: add soft-delete column to items."""
+    """v0 -> v1: add soft-delete column to items."""
     if not _column_exists(conn, "items", "deleted_at"):
         conn.execute("ALTER TABLE items ADD COLUMN deleted_at TEXT")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_items_deleted ON items(deleted_at)")
 
 
 def _migration_2_add_item_images(conn: sqlite3.Connection) -> None:
-    """v2 -> v3: add item_images table for multi-image attachments."""
+    """v1 -> v2: add item_images table for multi-image attachments."""
     conn.executescript(
         """
         CREATE TABLE IF NOT EXISTS item_images (
@@ -89,11 +115,53 @@ def _migration_2_add_item_images(conn: sqlite3.Connection) -> None:
     )
 
 
+def _migration_3_add_contacts(conn: sqlite3.Connection) -> None:
+    """v2 -> v3: add contacts table for loan tracking."""
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS contacts (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            name       TEXT NOT NULL,
+            phone      TEXT,
+            email      TEXT,
+            notes      TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        """
+    )
+
+
+def _migration_4_add_loans(conn: sqlite3.Connection) -> None:
+    """v3 -> v4: add loans table for loan tracking."""
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS loans (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id      INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+            contact_id   INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+            borrower     TEXT NOT NULL,
+            loaned_on    TEXT NOT NULL DEFAULT (date('now')),
+            due_on       TEXT,
+            returned_on  TEXT,
+            notes        TEXT,
+            created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_loans_item    ON loans(item_id);
+        CREATE INDEX IF NOT EXISTS idx_loans_contact ON loans(contact_id);
+        CREATE INDEX IF NOT EXISTS idx_loans_open    ON loans(returned_on);
+        """
+    )
+
+
 # Ordered (version, migration_fn) pairs. Each migration brings the DB from
 # version N-1 to version N.
 _MIGRATIONS = [
     (1, _migration_1_add_deleted_at),
     (2, _migration_2_add_item_images),
+    (3, _migration_3_add_contacts),
+    (4, _migration_4_add_loans),
 ]
 
 

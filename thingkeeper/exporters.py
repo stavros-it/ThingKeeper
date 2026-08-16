@@ -14,7 +14,9 @@ from .repository import (
     Item,
     all_items,
     counts_by,
+    list_contacts,
     list_images,
+    list_loans,
     total_quantity,
     warranty_expired,
     warranty_expiring,
@@ -49,10 +51,12 @@ def export_csv(path: str | Path, items: list[Item] | None = None) -> Path:
 
 
 def export_archive(path: str | Path, items: list[Item] | None = None) -> Path:
-    """Export items + attachments to a .tkz zip archive.
+    """Export items + attachments + loans + contacts to a .tkz zip archive.
 
     Layout inside the archive:
         items.json.gz        — gzipped JSON list of item dicts
+        loans.json.gz        — gzipped JSON list of loan dicts
+        contacts.json.gz     — gzipped JSON list of contact dicts
         attachments/<file>   — referenced image files
     """
     items = items if items is not None else all_items()
@@ -78,7 +82,22 @@ def export_archive(path: str | Path, items: list[Item] | None = None) -> Path:
         rec["extra_images"] = extra
         records.append(rec)
 
-    payload = json.dumps(records, ensure_ascii=False, indent=2)
+    # Build a quick item-id -> serial lookup so loans can be re-mapped on import.
+    items_by_id = {it.id: it for it in items if it.id is not None}
+    loan_records = []
+    for ln in list_loans():
+        rec = ln.as_dict()
+        item = items_by_id.get(ln.item_id)
+        if item is not None:
+            rec["_serial"] = item.serial
+        loan_records.append(rec)
+    contacts = [c.as_dict() for c in list_contacts()]
+
+    payload = json.dumps(
+        {"items": records, "loans": loan_records, "contacts": contacts},
+        ensure_ascii=False,
+        indent=2,
+    )
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("items.json.gz", gzip.compress(payload.encode("utf-8")))
         for ap in sorted(attach_seen):

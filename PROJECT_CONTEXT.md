@@ -150,7 +150,42 @@ These rules keep the data layer unit-testable without a display server.
 | `applied` | TEXT    | `datetime('now')` — when the migration was applied |
 
 The migration runner in `database.py` applies additive migrations in order
-and records each applied version. Current schema version: 2.
+and records each applied version. Current schema version: 4.
+
+### `contacts` table (loan tracking, v0.3)
+
+| Column       | Type     | Notes |
+|--------------|----------|-------|
+| `id`         | INTEGER  | Primary key, autoincrement |
+| `name`       | TEXT     | NOT NULL — full name |
+| `phone`      | TEXT     | optional |
+| `email`      | TEXT     | optional |
+| `notes`      | TEXT     | free-form |
+| `created_at` | TEXT     | `datetime('now')` |
+| `updated_at` | TEXT     | `datetime('now')`, refreshed on update |
+
+### `loans` table (loan tracking, v0.3)
+
+| Column        | Type     | Notes |
+|---------------|----------|-------|
+| `id`          | INTEGER  | Primary key, autoincrement |
+| `item_id`     | INTEGER  | FK to `items(id)` ON DELETE CASCADE |
+| `contact_id`  | INTEGER  | FK to `contacts(id)` ON DELETE SET NULL |
+| `borrower`    | TEXT     | NOT NULL — denormalised from contact for resilience |
+| `loaned_on`   | TEXT     | ISO date, defaults to today |
+| `due_on`      | TEXT     | ISO date, optional |
+| `returned_on` | TEXT     | ISO date, NULL while loan is open |
+| `notes`       | TEXT     | free-form |
+| `created_at`  | TEXT     | `datetime('now')` |
+| `updated_at`  | TEXT     | `datetime('now')`, refreshed on update |
+
+**Indexes:** `item_id`, `contact_id`, `returned_on` (for fast "open loans" queries).
+
+**Status lifecycle:** when `open_loan()` is called, the item's previous status
+is stored as a marker in the `info` field (`[Previous status: AVAILABLE]`) and
+the item's status is set to `LOANED`. On `return_loan()`, the marker is read
+and stripped, and the item's status is restored. If no marker is found the
+status defaults to `AVAILABLE`.
 
 ### Why dates are stored as TEXT
 
@@ -187,16 +222,20 @@ ThingKeeper/
     ├── app.py                   # QApplication bootstrap
     ├── config.py                # paths + constants
     ├── database.py              # sqlite3 connection + schema + migration runner
-    ├── repository.py            # Item dataclass + CRUD + queries + multi-image + soft-delete
+    ├── repository.py            # Item, Contact, Loan dataclasses + CRUD + queries
     ├── commands.py              # undo/redo command pattern + UndoStack
-    ├── importers.py             # Excel / archive / CSV import
-    ├── exporters.py             # archive / CSV / Excel / PDF export
+    ├── importers.py             # Excel / archive / CSV import (v0.3 archive format)
+    ├── exporters.py             # archive / CSV / Excel / PDF export (v0.3 archive format)
     ├── scanner.py              # serial lookup helper
     └── ui/
         ├── __init__.py
-        ├── main_window.py       # table, filters, menus, toolbar, undo/redo, saved filters
+        ├── main_window.py       # table, filters, menus, toolbar, undo/redo, loans, contacts
         ├── item_dialog.py       # add/edit dialog (multi-image gallery + drag-and-drop + warranty)
         ├── bulk_edit_dialog.py  # bulk field change for selected items
+        ├── loan_dialog.py       # open a loan for an item
+        ├── loans_dialog.py      # browse open/all loans, return items
+        ├── loan_history_dialog.py  # read-only loan history per item
+        ├── contacts_dialog.py   # browse/add/edit/delete contacts
         ├── scan_dialog.py       # serial scan dialog
         ├── trash_dialog.py      # view / restore / purge soft-deleted items
         └── reports_dialog.py    # PDF report dialog

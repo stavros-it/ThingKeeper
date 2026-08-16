@@ -126,9 +126,11 @@ def _record_to_item(record: dict) -> Item:
 def import_archive(path: str | Path) -> ImportResult:
     """Import a .tkz (zip + gzip json + attachments) archive.
 
-    Archive layout:
-        items.json.gz      — gzipped JSON list of item dicts
-        attachments/<file> — image files referenced by items.json
+    Supports two layouts:
+    - v0.2 (legacy): items.json.gz contains a JSON list of item dicts.
+    - v0.3+: items.json.gz contains {"items": [...], "loans": [...], "contacts": [...]}.
+
+    Attachments are restored under data/attachments/.
     """
     path = Path(path)
     errors: list[str] = []
@@ -136,7 +138,6 @@ def import_archive(path: str | Path) -> ImportResult:
         names = zf.namelist()
         if "items.json.gz" not in names:
             return ImportResult(0, 0, ["Archive is missing items.json.gz"])
-        # Read + decompress the JSON manifest.
         with zf.open("items.json.gz") as raw:
             payload = gzip.decompress(raw.read())
         try:
@@ -144,8 +145,18 @@ def import_archive(path: str | Path) -> ImportResult:
         except json.JSONDecodeError as exc:
             return ImportResult(0, 0, [f"Invalid JSON: {exc}"])
 
+        # Normalise to dict-with-sections; old archives are a bare list.
+        if isinstance(data, list):
+            item_records = data
+            loan_records: list[dict] = []
+            contact_records: list[dict] = []
+        else:
+            item_records = data.get("items", [])
+            loan_records = data.get("loans", [])
+            contact_records = data.get("contacts", [])
+
         items = []
-        for i, record in enumerate(data, start=1):
+        for i, record in enumerate(item_records, start=1):
             try:
                 items.append(_record_to_item(record))
             except Exception as exc:  # pragma: no cover - defensive
@@ -164,7 +175,7 @@ def import_archive(path: str | Path) -> ImportResult:
             Path(n).name for n in names if n.startswith("attachments/")
         }
         extra_to_restore: list[tuple[int, list[str]]] = []
-        for idx, (record, item) in enumerate(zip(data, items)):
+        for idx, (record, item) in enumerate(zip(item_records, items)):
             img = record.get("image_path") or ""
             if img:
                 base = Path(img).name
@@ -172,7 +183,6 @@ def import_archive(path: str | Path) -> ImportResult:
                     item.image_path = str(config.ATTACHMENTS_DIR / base)
             extras = record.get("extra_images") or []
             if extras and item.id is None:
-                # Items haven't been inserted yet; collect for after bulk_insert.
                 extra_to_restore.append((idx, [
                     str(config.ATTACHMENTS_DIR / Path(e).name)
                     for e in extras if Path(e).name in attach_names
@@ -185,6 +195,53 @@ def import_archive(path: str | Path) -> ImportResult:
             if idx < len(items) and items[idx].id is not None:
                 for p in paths:
                     add_image(items[idx].id, p)
+
+        # Restore contacts (must come before loans so FK can resolve).
+        contact_id_map: dict[int, int] = {}
+        from .repository import Contact, create_contact
+        for record in contact_records:
+            old_id = record.get("id")
+            contact = Contact(
+                name=str(record.get("name", "")),
+                phone=str(record.get("phone", "")),
+                email=str(record.get("email", "")),
+                notes=str(record.get("notes", "")),
+            )
+            new_id = create_contact(contact)
+            if old_id is not None:
+                contact_id_map[int(old_id)] = new_id
+
+        # Restore loans. We re-map item_id by serial if possible,
+        # otherwise by matching brand+model. Falls back to skipping.
+        from .repository import find_by_serial, open_loan
+        for record in loan_records:
+            borrower = str(record.get("borrower", "")).strip()
+            if not borrower:
+                errors.append("Loan skipped: no borrower")
+                continue
+            old_contact_id = record.get("contact_id")
+            due_on = str(record.get("due_on", "") or "")
+            notes = str(record.get("notes", "") or "")
+            # Try to find the item by serial first; this is best-effort.
+            item = None
+            serial = record.get("_serial", "")
+            if serial:
+                item = find_by_serial(str(serial))
+            if item is None:
+                errors.append(f"Loan for borrower '{borrower}' skipped: item not found")
+                continue
+            new_contact_id = contact_id_map.get(int(old_contact_id)) if old_contact_id else None
+            try:
+                open_loan(
+                    item.id,
+                    borrower=borrower,
+                    contact_id=new_contact_id,
+                    due_on=due_on,
+                    notes=notes,
+                )
+            except Exception as exc:  # pragma: no cover - defensive
+                errors.append(f"Loan for '{borrower}': {exc}")
+
         return ImportResult(imported, 0, errors)
 
 

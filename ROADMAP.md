@@ -54,17 +54,20 @@ maintainable desktop app.
 
 ---
 
-## v0.3 — Loan tracking (Planned)
+## v0.3 — Loan tracking (Done)
 
 **Goal:** know who has what, and when it should come back.
 
-- **Loans table** — `loans(item_id, borrower, loaned_on, due_on, returned_on, notes)`
-- **Loan dialog** — pick a contact, due date, optional notes
-- **Return workflow** — one-click return, auto-stamps `returned_on`
-- **Overdue highlighting** in the main table and reports
-- **Loan history per item** in the edit dialog
-- **Contacts list** — simple `contacts(name, phone, email, notes)` table
-- **"On loan" status** auto-set / auto-cleared when loans open/close
+- **Loans table** — `loans(item_id, contact_id, borrower, loaned_on, due_on, returned_on, notes)` (migration v4)
+- **Contacts table** — `contacts(name, phone, email, notes)` (migration v3)
+- **Loan dialog** — pick a contact (or free-text borrower), due date, notes (`Ctrl+L`)
+- **Return workflow** — one-click return from the Loans dialog, auto-stamps `returned_on`
+- **Overdue highlighting** in the main table (red background on status cell) and Loans dialog
+- **Loan history per item** — read-only `LoanHistoryDialog` accessible from the Loans menu
+- **"On loan" status** auto-set when a loan opens; previous status restored on return
+- **Loans overview dialog** — filter by open / overdue, return items inline
+- **Contacts dialog** — search, add, edit, delete contacts
+- **Archive format extended** — `.tkz` now includes loans + contacts (backward compatible with v0.2 archives)
 
 ---
 
