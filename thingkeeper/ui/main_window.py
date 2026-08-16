@@ -265,7 +265,7 @@ class MainWindow(QMainWindow):
         header = self.table.horizontalHeader()
         header.setSectionsMovable(True)
         header.setStretchLastSection(False)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         header.customContextMenuRequested.connect(self._show_column_menu)
         for i, (_, w) in enumerate(COLUMNS):
@@ -782,16 +782,13 @@ class MainWindow(QMainWindow):
         for i in range(len(COLUMNS)):
             self.table.setColumnHidden(i, False)
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         for i, (_, w) in enumerate(COLUMNS):
             header.resizeSection(i, w)
         self.table.sortByColumn(-1, Qt.SortOrder.AscendingOrder)
         self._save_column_state()
 
     def _on_section_resized(self, logical: int, old: int, new: int) -> None:
-        header = self.table.horizontalHeader()
-        if header.sectionResizeMode(logical) != QHeaderView.ResizeMode.Interactive:
-            header.setSectionResizeMode(logical, QHeaderView.ResizeMode.Interactive)
         self._save_column_state()
 
     def _on_section_moved(self, logical: int, old_visual: int, new_visual: int) -> None:
@@ -837,7 +834,6 @@ class MainWindow(QMainWindow):
             try:
                 widths = json.loads(widths_raw)
                 header = self.table.horizontalHeader()
-                header.setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)
                 for i, w in enumerate(widths):
                     if i < len(COLUMNS) and w > 0:
                         header.resizeSection(i, w)
