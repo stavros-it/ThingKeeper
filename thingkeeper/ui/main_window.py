@@ -76,6 +76,7 @@ from .settings_dialog import SettingsDialog
 from .theme import (
     DANGER,
     DANGER_BG,
+    INFO,
     STATUS_COLORS,
     SUCCESS,
     TEXT,
@@ -558,6 +559,9 @@ class MainWindow(QMainWindow):
                 # Damaged item: make all text in the row red.
                 if it.status == "BROKEN":
                     item.setForeground(QColor(DANGER))
+                # In-use item: make all text in the row blue.
+                elif it.status == "IN USE":
+                    item.setForeground(QColor(INFO))
                 self.table.setItem(row, col, item)
         if self._first_populate:
             self.table.resizeColumnsToContents()
