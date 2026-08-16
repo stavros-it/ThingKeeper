@@ -104,6 +104,7 @@ _SETTINGS_FILTERS = "filters/saved"
 _SETTINGS_RECENT_IMP = "recent/imports"
 _SETTINGS_RECENT_EXP = "recent/exports"
 _SETTINGS_COL_VIS = "columns/visible"
+_SETTINGS_COL_WIDTHS = "columns/widths"
 _SETTINGS_SORT = "table/sort"
 
 
@@ -175,6 +176,7 @@ class MainWindow(QMainWindow):
         self.resize(1280, 760)
         self._items: list[Item] = []
         self._settings = QSettings("ThingKeeper", "ThingKeeper")
+        self._first_populate = True
         self.undo_stack = UndoStack()
         self.undo_stack.set_changed_callback(self._update_undo_actions)
         self._build_ui()
@@ -552,7 +554,10 @@ class MainWindow(QMainWindow):
                 if col == 6 and it.id in overdue_loan_ids:
                     item.setBackground(QColor(DANGER_BG))
                 self.table.setItem(row, col, item)
-        self.table.resizeColumnsToContents()
+        if self._first_populate:
+            self.table.resizeColumnsToContents()
+            self._first_populate = False
+            self._save_column_state()
         self.table.setUpdatesEnabled(True)
         self.table.setSortingEnabled(True)
         self._update_actions()
@@ -783,6 +788,7 @@ class MainWindow(QMainWindow):
         for i in range(len(COLUMNS)):
             self.table.setColumnHidden(i, False)
         self.table.sortByColumn(-1, Qt.SortOrder.AscendingOrder)
+        self._first_populate = True
         self._save_column_state()
 
     def _on_section_moved(self, logical: int, old_visual: int, new_visual: int) -> None:
@@ -795,8 +801,10 @@ class MainWindow(QMainWindow):
         header = self.table.horizontalHeader()
         visible = [not self.table.isColumnHidden(i) for i in range(len(COLUMNS))]
         order = [header.visualIndex(i) for i in range(len(COLUMNS))]
+        widths = [header.sectionSize(i) for i in range(len(COLUMNS))]
         self._settings.setValue(_SETTINGS_COL_VIS, json.dumps(visible))
         self._settings.setValue(_SETTINGS_COL_ORDER, json.dumps(order))
+        self._settings.setValue(_SETTINGS_COL_WIDTHS, json.dumps(widths))
         sort_col = int(header.sortIndicatorSection())
         sort_ord = int(header.sortIndicatorOrder().value)
         self._settings.setValue(_SETTINGS_SORT, json.dumps([sort_col, sort_ord]))
@@ -819,6 +827,17 @@ class MainWindow(QMainWindow):
                 for logical, visual in enumerate(order):
                     if logical < len(COLUMNS):
                         header.moveSection(header.visualIndex(logical), visual)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        widths_raw = self._settings.value(_SETTINGS_COL_WIDTHS)
+        if widths_raw:
+            try:
+                widths = json.loads(widths_raw)
+                header = self.table.horizontalHeader()
+                for i, w in enumerate(widths):
+                    if i < len(COLUMNS) and w > 0:
+                        header.resizeSection(i, w)
+                self._first_populate = False
             except (json.JSONDecodeError, TypeError):
                 pass
         sort_raw = self._settings.value(_SETTINGS_SORT)
