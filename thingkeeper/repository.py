@@ -28,6 +28,8 @@ class Item:
     location: str = ""
     warranty_end: str = ""
     image_path: str = ""
+    unit_price: float = 0.0
+    depreciation_years: float = 0.0
     deleted_at: str = ""
     created_at: str = ""
     updated_at: str = ""
@@ -35,7 +37,7 @@ class Item:
     COLUMNS: tuple = field(default_factory=lambda: (
         "group_name", "type", "brand", "model", "info", "serial",
         "store", "purchase_date", "status", "quantity", "location",
-        "warranty_end", "image_path",
+        "warranty_end", "image_path", "unit_price", "depreciation_years",
     ))
 
     @classmethod
@@ -55,6 +57,12 @@ class Item:
             location=row["location"] or "",
             warranty_end=row["warranty_end"] or "",
             image_path=row["image_path"] or "",
+            unit_price=row["unit_price"] if row["unit_price"] is not None else 0.0,
+            depreciation_years=(
+                row["depreciation_years"]
+                if row["depreciation_years"] is not None
+                else 0.0
+            ),
             deleted_at=row["deleted_at"] or "",
             created_at=row["created_at"] or "",
             updated_at=row["updated_at"] or "",
@@ -76,6 +84,8 @@ class Item:
             "location": self.location,
             "warranty_end": self.warranty_end,
             "image_path": self.image_path,
+            "unit_price": self.unit_price,
+            "depreciation_years": self.depreciation_years,
         }
 
 
@@ -128,13 +138,15 @@ def create_item(item: Item) -> int:
             """
             INSERT INTO items
                 (group_name, type, brand, model, info, serial, store,
-                 purchase_date, status, quantity, location, warranty_end, image_path)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                 purchase_date, status, quantity, location, warranty_end,
+                 image_path, unit_price, depreciation_years)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 item.group_name, item.type, item.brand, item.model, item.info,
                 item.serial, item.store, item.purchase_date, item.status,
-                item.quantity, item.location, item.warranty_end, item.image_path,
+                item.quantity, item.location, item.warranty_end,
+                item.image_path, item.unit_price, item.depreciation_years,
             ),
         )
         conn.commit()
@@ -151,13 +163,15 @@ def update_item(item: Item) -> None:
             UPDATE items SET
                 group_name=?, type=?, brand=?, model=?, info=?, serial=?, store=?,
                 purchase_date=?, status=?, quantity=?, location=?, warranty_end=?,
-                image_path=?, updated_at=datetime('now')
+                image_path=?, unit_price=?, depreciation_years=?,
+                updated_at=datetime('now')
             WHERE id=?
             """,
             (
                 item.group_name, item.type, item.brand, item.model, item.info,
                 item.serial, item.store, item.purchase_date, item.status,
-                item.quantity, item.location, item.warranty_end, item.image_path,
+                item.quantity, item.location, item.warranty_end,
+                item.image_path, item.unit_price, item.depreciation_years,
                 item.id,
             ),
         )
@@ -172,7 +186,7 @@ def bulk_update(item_ids: Iterable[int], fields: dict) -> None:
     """
     allowed = {
         "group_name", "type", "brand", "store", "location", "status",
-        "purchase_date", "warranty_end",
+        "purchase_date", "warranty_end", "unit_price", "depreciation_years",
     }
     bad = set(fields) - allowed
     if bad:
@@ -386,6 +400,66 @@ def total_quantity() -> int:
     return int(row["s"])
 
 
+def total_value() -> float:
+    """Sum of quantity * unit_price across all non-deleted items."""
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(quantity * COALESCE(unit_price,0)),0) AS s "
+            "FROM items WHERE deleted_at IS NULL"
+        ).fetchone()
+    return float(row["s"])
+
+
+def value_by_group() -> list[tuple[str, float]]:
+    """Total value per group, sorted by value descending."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT COALESCE(group_name,'(none)') AS g, "
+            "COALESCE(SUM(quantity * COALESCE(unit_price,0)),0) AS v "
+            "FROM items WHERE deleted_at IS NULL "
+            "GROUP BY group_name ORDER BY v DESC"
+        ).fetchall()
+    return [(r["g"], float(r["v"])) for r in rows]
+
+
+def qty_by_group() -> list[tuple[str, int]]:
+    """Total quantity per group, sorted by quantity descending."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT COALESCE(group_name,'(none)') AS g, "
+            "COALESCE(SUM(quantity),0) AS q "
+            "FROM items WHERE deleted_at IS NULL "
+            "GROUP BY group_name ORDER BY q DESC"
+        ).fetchall()
+    return [(r["g"], int(r["q"])) for r in rows]
+
+
+def estimate_depreciation(item: Item) -> float:
+    """Estimate the current (depreciated) value of an item.
+
+    Uses straight-line depreciation: value drops to zero over
+    `depreciation_years` from the purchase date. If no purchase date or
+    depreciation period is set, returns the original unit_price.
+    """
+    if item.depreciation_years <= 0 or not item.purchase_date:
+        return item.unit_price
+    try:
+        purchased = date.fromisoformat(item.purchase_date[:10])
+    except ValueError:
+        return item.unit_price
+    age_days = (date.today() - purchased).days
+    age_years = age_days / 365.25
+    if age_years >= item.depreciation_years:
+        return 0.0
+    remaining = 1.0 - (age_years / item.depreciation_years)
+    return max(0.0, item.unit_price * remaining)
+
+
+def total_depreciated_value() -> float:
+    """Sum of depreciated values across all non-deleted items."""
+    return sum(estimate_depreciation(it) for it in all_items())
+
+
 def all_items() -> list[Item]:
     return list_items()
 
@@ -399,13 +473,15 @@ def bulk_insert(items: Iterable[Item]) -> int:
                 """
                 INSERT INTO items
                   (group_name, type, brand, model, info, serial, store,
-                   purchase_date, status, quantity, location, warranty_end, image_path)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   purchase_date, status, quantity, location, warranty_end,
+                   image_path, unit_price, depreciation_years)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     it.group_name, it.type, it.brand, it.model, it.info,
                     it.serial, it.store, it.purchase_date, it.status,
-                    it.quantity, it.location, it.warranty_end, it.image_path,
+                    it.quantity, it.location, it.warranty_end,
+                    it.image_path, it.unit_price, it.depreciation_years,
                 ),
             )
             it.id = int(cur.lastrowid)

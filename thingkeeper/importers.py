@@ -22,6 +22,10 @@ EXCEL_HEADER_MAP = {
     "PURCHASE": "purchase_date",
     "SERIAL": "serial",
     "STORE": "store",
+    "UNIT_PRICE": "unit_price",
+    "PRICE": "unit_price",
+    "DEPRECIATION_YEARS": "depreciation_years",
+    "DEPRECIATION": "depreciation_years",
 }
 
 
@@ -81,20 +85,7 @@ def import_excel(path: str | Path) -> ImportResult:
             skipped += 1
             continue
         try:
-            items.append(
-                Item(
-                    group_name=record.get("group_name", ""),
-                    type=record.get("type", ""),
-                    brand=record.get("brand", ""),
-                    model=record.get("model", ""),
-                    info=record.get("info", ""),
-                    serial=record.get("serial", ""),
-                    store=record.get("store", ""),
-                    purchase_date=to_iso(record.get("purchase_date", "")),
-                    status=config.DEFAULT_STATUS,
-                    quantity=1,
-                )
-            )
+            items.append(_record_to_item(record))
         except Exception as exc:  # pragma: no cover - defensive
             errors.append(f"Row {rno}: {exc}")
             skipped += 1
@@ -104,6 +95,12 @@ def import_excel(path: str | Path) -> ImportResult:
 
 
 def _record_to_item(record: dict) -> Item:
+    def _float(val, default=0.0) -> float:
+        try:
+            return float(val) if val not in (None, "") else default
+        except (ValueError, TypeError):
+            return default
+
     return Item(
         id=None,
         group_name=str(record.get("group_name", "")),
@@ -120,6 +117,8 @@ def _record_to_item(record: dict) -> Item:
         location=str(record.get("location", "")),
         warranty_end=to_iso(record.get("warranty_end", "")),
         image_path="",  # attachments restored separately
+        unit_price=_float(record.get("unit_price", 0.0)),
+        depreciation_years=_float(record.get("depreciation_years", 0.0)),
     )
 
 
@@ -266,6 +265,10 @@ _CSV_ALIASES = {
     "location": "location",
     "warranty_end": "warranty_end",
     "warranty": "warranty_end",
+    "unit_price": "unit_price",
+    "price": "unit_price",
+    "depreciation_years": "depreciation_years",
+    "depreciation": "depreciation_years",
 }
 
 

@@ -71,16 +71,16 @@ maintainable desktop app.
 
 ---
 
-## v0.4 — Reports & insights (Planned)
+## v0.4 — Reports & insights (Done)
 
 **Goal:** turn the inventory into actionable knowledge.
 
-- **Custom report builder** — choose columns, filters, grouping, sort
-- **Charts** — bar chart of items per group, pie of status distribution
-- **Depreciation estimate** — based on purchase date + category lifespan
-- **Total value report** — sum `quantity × unit_price` (new optional field)
-- **Scheduled PDF export** — monthly snapshot to a chosen folder
-- **HTML export** for easy sharing / printing
+- **Custom report builder** — choose columns, filters, grouping, sort, generate PDF (`File → Custom report builder`)
+- **Dashboard** — bar chart of items per group, pie chart of status distribution, value-by-group bar chart, summary stats
+- **Depreciation estimate** — straight-line depreciation based on purchase date + `depreciation_years` per item
+- **Total value report** — `unit_price` field added (migration v5), sum of `quantity × unit_price` in PDF report + dashboard
+- **Scheduled PDF export** — CLI entry point: `python -m thingkeeper --report PATH.pdf` (no GUI, schedulable via Task Scheduler / cron)
+- **HTML export** — standalone `.html` file with styled table for easy sharing / printing
 
 ---
 

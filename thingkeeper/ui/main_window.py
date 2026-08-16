@@ -41,7 +41,7 @@ from ..commands import (
     UndoStack,
     UpdateItemCommand,
 )
-from ..exporters import export_archive, export_csv, export_excel
+from ..exporters import export_archive, export_csv, export_excel, export_html
 from ..importers import import_archive, import_csv, import_excel
 from ..repository import (
     Item,
@@ -262,6 +262,10 @@ class MainWindow(QMainWindow):
         self.act_report.triggered.connect(self.generate_report)
         tb.addAction(self.act_report)
 
+        self.act_dashboard = QAction("Dashboard", self)
+        self.act_dashboard.triggered.connect(self.show_dashboard)
+        tb.addAction(self.act_dashboard)
+
         tb.addSeparator()
         self.act_refresh = QAction("Refresh", self)
         self.act_refresh.setShortcut("F5")
@@ -286,10 +290,13 @@ class MainWindow(QMainWindow):
         self._add_action(self._exp_menu, "ThingKeeper archive (.tkz)…", self._export_archive)
         self._add_action(self._exp_menu, "Excel workbook (.xlsx)…", self._export_excel)
         self._add_action(self._exp_menu, "CSV (.csv)…", self._export_csv)
+        self._add_action(self._exp_menu, "HTML (.html)…", self._export_html)
         self._exp_menu.aboutToShow.connect(self._refresh_recent_exports)
 
         file_menu.addSeparator()
+        self._add_action(file_menu, "&Dashboard…", self.show_dashboard)
         self._add_action(file_menu, "Generate &report (PDF)…", self.generate_report, "Ctrl+R")
+        self._add_action(file_menu, "Custom report &builder…", self.show_report_builder)
         file_menu.addSeparator()
         self._add_action(file_menu, "&Quit", self.close, "Ctrl+Q")
 
@@ -308,6 +315,7 @@ class MainWindow(QMainWindow):
         self._add_action(view_menu, "&Refresh", self.refresh, "F5")
         self._add_action(view_menu, "&Scan serial", self.scan_serial, "Ctrl+K")
         self._add_action(view_menu, "&Clear filters", self._clear_filters)
+        self._add_action(view_menu, "&Dashboard…", self.show_dashboard)
         self._add_action(view_menu, "&Trash…", self.show_trash)
         view_menu.addSeparator()
         self._add_action(view_menu, "&Columns…", self._show_column_menu_at_zero)
@@ -611,6 +619,14 @@ class MainWindow(QMainWindow):
     def generate_report(self) -> None:
         ReportsDialog(self).exec()
 
+    def show_dashboard(self) -> None:
+        from .dashboard_dialog import DashboardDialog
+        DashboardDialog(self).exec()
+
+    def show_report_builder(self) -> None:
+        from .report_builder_dialog import ReportBuilderDialog
+        ReportBuilderDialog(self).exec()
+
     # --------------------------------------------------------- column state
     def _show_column_menu(self, pos) -> None:
         header = self.table.horizontalHeader()
@@ -859,6 +875,15 @@ class MainWindow(QMainWindow):
         self._add_recent(_SETTINGS_RECENT_EXP, path)
         self._run_export(export_csv, path, "CSV")
 
+    def _export_html(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export HTML", "thingkeeper.html", "HTML (*.html *.htm)"
+        )
+        if not path:
+            return
+        self._add_recent(_SETTINGS_RECENT_EXP, path)
+        self._run_export(export_html, path, "HTML")
+
     def _run_export(self, fn, path: str, label: str) -> None:
         try:
             fn(path)
@@ -872,6 +897,7 @@ class MainWindow(QMainWindow):
             "archive": export_archive,
             "CSV": export_csv,
             "Excel": export_excel,
+            "HTML": export_html,
         }.get(label)
         if not fn:
             return

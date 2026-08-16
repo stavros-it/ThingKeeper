@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS items (
     location      TEXT,
     warranty_end  TEXT,
     image_path    TEXT,
+    unit_price    REAL,
+    depreciation_years REAL,
     deleted_at    TEXT,
     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
@@ -78,7 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_loans_open    ON loans(returned_on);
 """
 
 # Latest schema version. Bump when adding a migration.
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def _column_exists(conn: sqlite3.Connection, table: str, column: str) -> bool:
@@ -155,6 +157,14 @@ def _migration_4_add_loans(conn: sqlite3.Connection) -> None:
     )
 
 
+def _migration_5_add_price_depreciation(conn: sqlite3.Connection) -> None:
+    """v4 -> v5: add unit_price and depreciation_years to items."""
+    if not _column_exists(conn, "items", "unit_price"):
+        conn.execute("ALTER TABLE items ADD COLUMN unit_price REAL")
+    if not _column_exists(conn, "items", "depreciation_years"):
+        conn.execute("ALTER TABLE items ADD COLUMN depreciation_years REAL")
+
+
 # Ordered (version, migration_fn) pairs. Each migration brings the DB from
 # version N-1 to version N.
 _MIGRATIONS = [
@@ -162,6 +172,7 @@ _MIGRATIONS = [
     (2, _migration_2_add_item_images),
     (3, _migration_3_add_contacts),
     (4, _migration_4_add_loans),
+    (5, _migration_5_add_price_depreciation),
 ]
 
 

@@ -125,6 +125,8 @@ These rules keep the data layer unit-testable without a display server.
 | `location`      | TEXT     | room / shelf / box |
 | `warranty_end`  | TEXT     | ISO date, empty if none |
 | `image_path`    | TEXT     | absolute path under `data/attachments/` (primary image) |
+| `unit_price`    | REAL     | purchase price per unit (optional, default 0.0) |
+| `depreciation_years` | REAL | straight-line depreciation period in years (optional, default 0.0) |
 | `deleted_at`    | TEXT     | non-null when soft-deleted (in trash); null otherwise |
 | `created_at`    | TEXT     | `datetime('now')` |
 | `updated_at`    | TEXT     | `datetime('now')`, refreshed on update |
@@ -150,7 +152,7 @@ These rules keep the data layer unit-testable without a display server.
 | `applied` | TEXT    | `datetime('now')` — when the migration was applied |
 
 The migration runner in `database.py` applies additive migrations in order
-and records each applied version. Current schema version: 4.
+and records each applied version. Current schema version: 5.
 
 ### `contacts` table (loan tracking, v0.3)
 
@@ -225,17 +227,20 @@ ThingKeeper/
     ├── repository.py            # Item, Contact, Loan dataclasses + CRUD + queries
     ├── commands.py              # undo/redo command pattern + UndoStack
     ├── importers.py             # Excel / archive / CSV import (v0.3 archive format)
-    ├── exporters.py             # archive / CSV / Excel / PDF export (v0.3 archive format)
+    ├── exporters.py             # archive / CSV / Excel / HTML / PDF export
     ├── scanner.py              # serial lookup helper
     └── ui/
         ├── __init__.py
-        ├── main_window.py       # table, filters, menus, toolbar, undo/redo, loans, contacts
-        ├── item_dialog.py       # add/edit dialog (multi-image gallery + drag-and-drop + warranty)
+        ├── main_window.py       # table, filters, menus, toolbar, undo/redo, loans, contacts, dashboard
+        ├── item_dialog.py       # add/edit dialog (multi-image, price, depreciation, warranty)
         ├── bulk_edit_dialog.py  # bulk field change for selected items
         ├── loan_dialog.py       # open a loan for an item
         ├── loans_dialog.py      # browse open/all loans, return items
         ├── loan_history_dialog.py  # read-only loan history per item
         ├── contacts_dialog.py   # browse/add/edit/delete contacts
+        ├── dashboard_dialog.py  # charts + summary statistics
+        ├── report_builder_dialog.py  # custom PDF report builder
+        ├── charts.py            # bar chart (pyqtgraph) + pie chart (QPainter)
         ├── scan_dialog.py       # serial scan dialog
         ├── trash_dialog.py      # view / restore / purge soft-deleted items
         └── reports_dialog.py    # PDF report dialog

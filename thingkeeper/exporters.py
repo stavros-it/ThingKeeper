@@ -17,7 +17,9 @@ from .repository import (
     list_contacts,
     list_images,
     list_loans,
+    total_depreciated_value,
     total_quantity,
+    total_value,
     warranty_expired,
     warranty_expiring,
 )
@@ -36,7 +38,7 @@ def export_csv(path: str | Path, items: list[Item] | None = None) -> Path:
     fieldnames = [
         "group_name", "type", "brand", "model", "info", "serial", "store",
         "purchase_date", "status", "quantity", "location", "warranty_end",
-        "image_path",
+        "unit_price", "depreciation_years", "image_path",
     ]
     with open(path, "w", encoding="utf-8-sig", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
@@ -44,8 +46,6 @@ def export_csv(path: str | Path, items: list[Item] | None = None) -> Path:
         for it in items:
             row = it.as_dict()
             row.pop("id", None)
-            for k in ("purchase_date", "warranty_end"):
-                row[k] = _fmt(row.get(k, ""))
             writer.writerow({k: _fmt(row.get(k, "")) for k in fieldnames})
     return path
 
@@ -121,6 +121,7 @@ def export_excel(path: str | Path, items: list[Item] | None = None) -> Path:
     headers = [
         "GROUP", "TYPE", "BRAND", "MODEL", "INFO", "PURCHASE", "SERIAL",
         "STORE", "STATUS", "QUANTITY", "LOCATION", "WARRANTY_END",
+        "UNIT_PRICE", "DEPRECIATION_YEARS",
     ]
     ws.append(headers)
     header_font = Font(bold=True, color="FFFFFF")
@@ -139,9 +140,66 @@ def export_excel(path: str | Path, items: list[Item] | None = None) -> Path:
             it.group_name, it.type, it.brand, it.model, it.info,
             it.purchase_date, it.serial, it.store, it.status,
             it.quantity, it.location, it.warranty_end,
+            it.unit_price, it.depreciation_years,
         ])
 
     wb.save(path)
+    return path
+
+
+def export_html(path: str | Path, items: list[Item] | None = None) -> Path:
+    """Export items to a standalone HTML file for easy sharing / printing."""
+    from html import escape
+
+    items = items if items is not None else all_items()
+    path = Path(path)
+    headers = [
+        "ID", "Group", "Type", "Brand", "Model", "Serial", "Status",
+        "Qty", "Location", "Purchase", "Warranty", "Store",
+        "Unit Price", "Depreciation (yrs)",
+    ]
+    rows_html = []
+    for it in items:
+        cells = [
+            it.id, it.group_name, it.type, it.brand, it.model,
+            it.serial, it.status, it.quantity, it.location,
+            it.purchase_date, it.warranty_end, it.store,
+            f"{it.unit_price:.2f}" if it.unit_price else "",
+            f"{it.depreciation_years:.1f}" if it.depreciation_years else "",
+        ]
+        row = "".join(f"<td>{escape(str(c))}</td>" for c in cells)
+        rows_html.append(f"<tr>{row}</tr>")
+
+    head = "".join(f"<th>{h}</th>" for h in headers)
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ThingKeeper Inventory</title>
+<style>
+  body {{ font-family: -apple-system, 'Segoe UI', sans-serif; margin: 24px; }}
+  h1 {{ color: #305496; }}
+  table {{ border-collapse: collapse; width: 100%; font-size: 13px; }}
+  th, td {{ border: 1px solid #ccc; padding: 6px 8px; text-align: left; }}
+  th {{ background: #305496; color: #fff; position: sticky; top: 0; }}
+  tr:nth-child(even) {{ background: #f7f7f7; }}
+  .meta {{ color: #666; margin-bottom: 16px; }}
+</style>
+</head>
+<body>
+<h1>ThingKeeper Inventory</h1>
+<p class="meta">Generated {datetime.now():%Y-%m-%d %H:%M} — {len(items)} items</p>
+<table>
+<thead><tr>{head}</tr></thead>
+<tbody>
+{chr(10).join(rows_html)}
+</tbody>
+</table>
+</body>
+</html>
+"""
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(html)
     return path
 
 
@@ -178,10 +236,14 @@ def export_pdf_report(path: str | Path) -> Path:
 
     items = all_items()
     total_qty = total_quantity()
+    tval = total_value()
+    dval = total_depreciated_value()
     story.append(Paragraph("<b>Summary</b>", styles["Heading2"]))
     summary = [
         ["Distinct items", str(len(items))],
         ["Total quantity", str(total_qty)],
+        ["Total value (purchase)", f"{tval:,.2f}"],
+        ["Total value (depreciated)", f"{dval:,.2f}"],
     ]
     for col, label in [("group_name", "By group"), ("status", "By status")]:
         summary.append([label, ", ".join(f"{k}={v}" for k, v in counts_by(col)) or "—"])

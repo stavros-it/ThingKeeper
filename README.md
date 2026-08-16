@@ -25,6 +25,14 @@ single-file storage.
   overdue loans are highlighted in the main table.
 - **Contacts** — manage a list of contacts (name, phone, email, notes) for loans.
 - **Loan history** — view the full loan history for any item.
+- **Dashboard** — visual overview: bar charts by group, pie chart of status
+  distribution, value summary, depreciation estimate.
+- **Custom report builder** — choose columns, filters, grouping and sort to
+  generate a custom PDF.
+- **Depreciation tracking** — `unit_price` and `depreciation_years` fields per item;
+  straight-line depreciation estimates in the dashboard and PDF report.
+- **HTML export** — standalone HTML file for easy sharing and printing.
+- **CLI report** — `python -m thingkeeper --report PATH.pdf` for scheduled PDF generation.
 - **Import** — Excel (`.xlsx`), compressed JSON archive (`.tkz`), CSV (`.csv`).
 - **Export** — `.tkz` (with attachments), CSV, Excel, PDF report.
 - **Recent files** — recently imported/exported files listed in the File menu.
@@ -75,6 +83,7 @@ new fields default to sensible values (status `AVAILABLE`, quantity `1`).
 | Redo              | `Ctrl+Y`        |
 | Bulk edit         | `Ctrl+B`        |
 | Loan item         | `Ctrl+L`        |
+| Generate report   | `Ctrl+R`        |
 | Scan serial       | `Ctrl+K`        |
 | Search            | `Ctrl+F`        |
 | Generate report   | `Ctrl+R`        |
@@ -95,17 +104,20 @@ ThingKeeper/
 │   ├── repository.py       # data access (CRUD, multi-image, soft-delete)
 │   ├── commands.py         # undo/redo command pattern + UndoStack
 │   ├── importers.py        # xlsx / .tkz / CSV import
-│   ├── exporters.py        # .tkz / CSV / xlsx / PDF export
+│   ├── exporters.py        # .tkz / CSV / xlsx / HTML / PDF export
 │   ├── scanner.py          # serial-scan helper
 │   └── ui/
 │       ├── __init__.py
 │       ├── main_window.py       # table, filters, toolbar, undo/redo, saved filters
-│       ├── item_dialog.py       # add/edit (multi-image gallery + drag-and-drop)
+│       ├── item_dialog.py       # add/edit (multi-image, price, depreciation)
 │       ├── bulk_edit_dialog.py  # bulk field change
 │       ├── loan_dialog.py       # open a loan for an item
 │       ├── loans_dialog.py      # browse loans, return items
 │       ├── loan_history_dialog.py  # loan history per item
 │       ├── contacts_dialog.py   # manage contacts
+│       ├── dashboard_dialog.py  # charts + summary stats
+│       ├── report_builder_dialog.py  # custom PDF report builder
+│       ├── charts.py            # bar chart (pyqtgraph) + pie chart (QPainter)
 │       ├── scan_dialog.py       # serial scan
 │       ├── trash_dialog.py      # view / restore / purge deleted items
 │       └── reports_dialog.py    # PDF report

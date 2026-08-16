@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QDateEdit,
     QDialog,
     QDialogButtonBox,
+    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
@@ -69,6 +70,19 @@ class ItemDialog(QDialog):
         self.qty_spin = QSpinBox()
         self.qty_spin.setRange(1, 1_000_000)
         self.qty_spin.setValue(1)
+
+        self.price_spin = QDoubleSpinBox()
+        self.price_spin.setRange(0.0, 1_000_000_000.0)
+        self.price_spin.setDecimals(2)
+        self.price_spin.setSingleStep(10.0)
+        self.price_spin.setValue(0.0)
+
+        self.depreciation_spin = QDoubleSpinBox()
+        self.depreciation_spin.setRange(0.0, 100.0)
+        self.depreciation_spin.setDecimals(1)
+        self.depreciation_spin.setSingleStep(1.0)
+        self.depreciation_spin.setValue(0.0)
+        self.depreciation_spin.setSuffix(" yrs")
 
         self.purchase_edit = QDateEdit()
         self.purchase_edit.setCalendarPopup(True)
@@ -144,6 +158,8 @@ class ItemDialog(QDialog):
         form.addRow("Serial:", self.serial_edit)
         form.addRow("Status:", self.status_combo)
         form.addRow("Quantity:", self.qty_spin)
+        form.addRow("Unit price:", self.price_spin)
+        form.addRow("Depreciation:", self.depreciation_spin)
         form.addRow("Store:", self.store_edit)
         form.addRow("Location:", self.location_edit)
         form.addRow("Purchase date:", self.purchase_edit)
@@ -184,6 +200,8 @@ class ItemDialog(QDialog):
         if item.status in config.STATUSES:
             self.status_combo.setCurrentText(item.status)
         self.qty_spin.setValue(max(1, item.quantity))
+        self.price_spin.setValue(item.unit_price)
+        self.depreciation_spin.setValue(item.depreciation_years)
         self.purchase_edit.setDate(self._parse_date(item.purchase_date, date.today()))
         if item.warranty_end:
             self.warranty_check.setChecked(True)
@@ -325,6 +343,8 @@ class ItemDialog(QDialog):
         base.location = self.location_edit.currentText().strip()
         base.status = self.status_combo.currentText()
         base.quantity = self.qty_spin.value()
+        base.unit_price = self.price_spin.value()
+        base.depreciation_years = self.depreciation_spin.value()
         base.purchase_date = self.purchase_edit.date().toString("yyyy-MM-dd")
         base.warranty_end = warranty
         base.info = self.info_edit.toPlainText().strip()
