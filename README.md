@@ -44,6 +44,10 @@ pip install -r requirements.txt
 python main.py
 ```
 
+On Windows you can also double-click **`launch.pyw`** (or pin it to the
+taskbar) — it uses `pythonw.exe`, so the app starts with no console window
+in the background.
+
 On first launch ThingKeeper creates a SQLite database at `data/thingkeeper.db` and an
 `data/attachments/` folder for images — both are git-ignored so your inventory stays
 local and private.
@@ -70,7 +74,8 @@ new fields default to sensible values (status `AVAILABLE`, quantity `1`).
 
 ```
 ThingKeeper/
-├── main.py                 # entry point
+├── main.py                 # entry point (console)
+├── launch.pyw              # entry point (no console window on Windows)
 ├── thingkeeper/
 │   ├── __init__.py
 │   ├── __main__.py
