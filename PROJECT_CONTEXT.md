@@ -248,9 +248,9 @@ ThingKeeper/
         ├── loans_dialog.py      # browse open/all loans, return items
         ├── loan_history_dialog.py  # read-only loan history per item
         ├── contacts_dialog.py   # browse/add/edit/delete contacts
-        ├── dashboard_dialog.py  # charts + summary statistics
+        ├── dashboard_dialog.py  # metric cards + bar charts + pie chart
         ├── report_builder_dialog.py  # custom PDF report builder
-        ├── charts.py            # bar chart (pyqtgraph) + pie chart (QPainter)
+        ├── charts.py            # horizontal bar chart (QPainter) + pie chart (QPainter)
         ├── scan_dialog.py       # serial scan dialog
         ├── trash_dialog.py      # view / restore / purge soft-deleted items
         ├── integrity_dialog.py  # data integrity check + cleanup UI

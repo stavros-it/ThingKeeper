@@ -1,18 +1,32 @@
-"""Chart widgets: bar chart (pyqtgraph) and pie chart (QPainter)."""
+"""Chart widgets: custom QPainter bar chart and pie chart.
+
+No pyqtgraph dependency for the bar chart — we draw it ourselves with
+QPainter, which gives full control over label placement and avoids the
+axis-clipping issues that plagued the pyqtgraph-based version.
+
+The design follows the Game DB stats dialog pattern:
+- Horizontal bars with a track (full width) + fill (proportional)
+- Smart in-bar labels (label left, value right) with contrast-aware text color
+- Rounded corners, expand to fill available space
+"""
 
 from __future__ import annotations
 
 import math
 
-import pyqtgraph as pg
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont, QPainter, QPen
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QSizePolicy, QWidget
 
-from .theme import ACCENT, BG_WINDOW, TEXT
-
-pg.setConfigOption("background", BG_WINDOW)
-pg.setConfigOption("foreground", TEXT)
+from .theme import (
+    ACCENT,
+    BG_WINDOW,
+    BORDER,
+    STATUS_COLORS,
+    TEXT,
+    TEXT_BRIGHT,
+    TEXT_DIM,
+)
 
 _PALETTE = [
     "#3b82f6", "#60a5fa", "#4ade80", "#fbbf24", "#f87171",
@@ -21,82 +35,139 @@ _PALETTE = [
 ]
 
 
-def _wrap_label(text: str, max_chars: int = 10) -> str:
-    """Wrap a long label onto multiple lines so it fits in a narrow column."""
-    words = text.split()
-    if len(words) == 1:
-        if len(text) <= max_chars:
-            return text
-        chunks = [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
-        return "\n".join(chunks)
-    lines: list[str] = []
-    cur = ""
-    for w in words:
-        if cur and len(cur) + 1 + len(w) > max_chars:
-            lines.append(cur)
-            cur = w
-        else:
-            cur = f"{cur} {w}".strip()
-    if cur:
-        lines.append(cur)
-    return "\n".join(lines)
+def _luminance(hex_color: str) -> float:
+    c = QColor(hex_color)
+    if not c.isValid():
+        return 0.0
+
+    def ch(v: int) -> float:
+        s = v / 255.0
+        return s / 12.92 if s <= 0.03928 else ((s + 0.055) / 1.055) ** 2.4
+
+    return 0.2126 * ch(c.red()) + 0.7152 * ch(c.green()) + 0.0722 * ch(c.blue())
 
 
-class BarChartWidget(pg.PlotWidget):
-    """Vertical bar chart for counts or values by category.
+def _contrast_text(bg_hex: str) -> QColor:
+    return QColor("#0F172A") if _luminance(bg_hex) > 0.20 else QColor(TEXT_BRIGHT)
 
-    Category labels are rendered as TextItem annotations inside the plot
-    scene (below the x-axis line) rather than as axis tick text. This
-    avoids pyqtgraph's axis bounding-rect clipping, which was cutting off
-    multi-line labels.
+
+class BarChart(QWidget):
+    """Horizontal bar chart with in-bar labels and numbers.
+
+    Bars fill available vertical space evenly. Text color inside each bar
+    is chosen by luminance: white on dark fills, near-black on light fills.
     """
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        data: list[tuple[str, int | float]],
+        color: str = ACCENT,
+        *,
+        use_status_colors: bool = False,
+        value_format: str = "{:.0f}",
+        parent: QWidget | None = None,
+    ):
         super().__init__(parent)
-        self.setMouseEnabled(False, False)
-        self.hideButtons()
-        self.showGrid(x=False, y=True, alpha=0.25)
-        self.plotItem = self.getPlotItem()
+        self._data = data
+        self._color = color
+        self._use_status_colors = use_status_colors
+        self._value_format = value_format
+        self._min_bar_h = 22
+        self._max_bar_h = 32
+        self._gap = 4
+        rows = max(len(data), 1)
+        self.setMinimumHeight(rows * (self._min_bar_h + self._gap) + 4)
+        self.setMinimumWidth(320)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-    def set_data(self, title: str, labels: list[str], values: list[float]) -> None:
-        self.clear()
-        if not values:
-            self.setTitle(f"{title} - no data")
+    def set_data(self, data: list[tuple[str, int | float]]) -> None:
+        self._data = data
+        rows = max(len(data), 1)
+        self.setMinimumHeight(rows * (self._min_bar_h + self._gap) + 4)
+        self.update()
+
+    def paintEvent(self, _event) -> None:  # noqa: N802 - Qt override
+        if not self._data:
             return
-        self.setTitle(title)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        max_val = max(values) if values else 1.0
-        if max_val <= 0:
-            max_val = 1.0
+        max_val = max((v for _, v in self._data), default=1) or 1
+        w = self.width()
+        h = self.height()
+        n = len(self._data)
 
-        bg = pg.BarGraphItem(
-            x=list(range(len(values))),
-            height=values,
-            width=0.6,
-            brush=QColor(ACCENT),
-        )
-        self.addItem(bg)
+        gap = self._gap
+        bar_h = min(self._max_bar_h, (h - gap * (n - 1) - 4) // n) if n > 0 else self._min_bar_h
+        bar_h = max(bar_h, self._min_bar_h)
+        total_h = bar_h * n + gap * (n - 1)
+        y_start = (h - total_h) // 2
+        pad = 10
 
-        # Disable bottom-axis tick text; labels are drawn as TextItems instead.
-        ax = self.getAxis("bottom")
-        ax.setTicks([[(i, "") for i in range(len(labels))]])
-        ax.setStyle(showValues=False, tickLength=0)
-        self.getAxis("left").setLabel("Count")
+        font = QFont()
+        font.setPointSize(9)
+        font.setBold(True)
+        painter.setFont(font)
+        fm = painter.fontMetrics()
 
-        # Label space below the axis line, expressed in data coordinates.
-        label_space = max_val * 0.18
+        text_muted = QColor(TEXT_DIM)
+        track_color = QColor(BORDER)
 
-        for i, lbl in enumerate(labels):
-            wrapped = _wrap_label(lbl)
-            txt = pg.TextItem(wrapped, color=TEXT, anchor=(0.5, 0))
-            txt.setFont(QFont("Segoe UI", 6))
-            txt.setPos(i, -label_space * 0.05)
-            self.addItem(txt)
+        for i, (label, value) in enumerate(self._data):
+            y = y_start + i * (bar_h + gap)
+            fill_w = int(w * value / max_val) if max_val else 0
 
-        # Lock the y-range so the label area below zero is always visible.
-        self.setYRange(-label_space, max_val * 1.12)
-        # Lock x-range so bars are centered with padding.
-        self.setXRange(-0.7, len(values) - 0.3)
+            painter.setBrush(track_color)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(0, y, w, bar_h, 4, 4)
+
+            fill_color_hex = self._color
+            if fill_w > 0:
+                if self._use_status_colors:
+                    fill_color_hex = STATUS_COLORS.get(label, self._color)
+                painter.setBrush(QColor(fill_color_hex))
+                painter.drawRoundedRect(0, y, fill_w, bar_h, 4, 4)
+
+            in_bar_text = _contrast_text(fill_color_hex) if fill_w > 0 else text_muted
+
+            value_text = self._value_format.format(value)
+            label_w = fm.horizontalAdvance(label)
+            value_w = fm.horizontalAdvance(value_text)
+
+            both_fit = fill_w >= label_w + value_w + pad * 3
+            value_fits = fill_w >= value_w + pad * 2
+
+            if fill_w > 0 and both_fit:
+                painter.setPen(in_bar_text)
+                painter.drawText(
+                    pad, y, fill_w - pad * 2 - value_w, bar_h,
+                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, label,
+                )
+                painter.drawText(
+                    pad, y, fill_w - pad * 2, bar_h,
+                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, value_text,
+                )
+            elif fill_w > 0 and value_fits:
+                painter.setPen(in_bar_text)
+                painter.drawText(
+                    pad, y, fill_w - pad * 2, bar_h,
+                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, value_text,
+                )
+                painter.setPen(text_muted)
+                painter.drawText(
+                    fill_w + pad, y, w - fill_w - pad, bar_h,
+                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, label,
+                )
+            else:
+                painter.setPen(text_muted)
+                painter.drawText(
+                    fill_w + pad, y, w - fill_w - pad, bar_h,
+                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, label,
+                )
+                painter.drawText(
+                    0, y, w - pad, bar_h,
+                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, value_text,
+                )
 
 
 class PieChartWidget(QWidget):
@@ -108,6 +179,7 @@ class PieChartWidget(QWidget):
         self._values: list[float] = []
         self._title: str = ""
         self.setMinimumSize(300, 300)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     def set_data(self, title: str, labels: list[str], values: list[float]) -> None:
         self._title = title
@@ -123,19 +195,17 @@ class PieChartWidget(QWidget):
         cx, cy = w // 2, h // 2 - 10
         radius = min(w, h) * 0.35
 
-        # Title.
         font = QFont()
         font.setPointSize(11)
         font.setBold(True)
         painter.setFont(font)
-        title_text = self._title if total > 0 else f"{self._title} — no data"
+        title_text = self._title if total > 0 else f"{self._title} - no data"
         painter.drawText(0, 0, w, 28, Qt.AlignmentFlag.AlignCenter, title_text)
 
         if total == 0:
             painter.end()
             return
 
-        # Pie slices.
         angle = 90.0
         for i, val in enumerate(self._values):
             span = (val / total) * 360.0
@@ -148,14 +218,12 @@ class PieChartWidget(QWidget):
             )
             angle -= span
 
-        # Donut hole.
         painter.setBrush(QColor(BG_WINDOW))
         painter.drawEllipse(
             int(cx - radius * 0.45), int(cy - radius * 0.45),
             int(radius * 0.9), int(radius * 0.9),
         )
 
-        # Legend.
         font.setPointSize(9)
         font.setBold(False)
         painter.setFont(font)
@@ -175,7 +243,7 @@ class PieChartWidget(QWidget):
             painter.drawRect(x, y + 2, 10, 10)
             painter.setPen(QColor(TEXT))
             pct = (self._values[i] / total) * 100 if total else 0
-            text = f"{label} ({pct:.0f}%)" if len(label) < 20 else f"{label[:17]}… ({pct:.0f}%)"
+            text = f"{label} ({pct:.0f}%)" if len(label) < 20 else f"{label[:17]}... ({pct:.0f}%)"
             painter.drawText(x + 16, y, 200, line_h, Qt.AlignmentFlag.AlignVCenter, text)
 
         painter.end()
