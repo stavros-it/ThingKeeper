@@ -105,7 +105,8 @@ class ItemDialog(QDialog):
         self.image_label.setFixedSize(200, 150)
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_label.setStyleSheet(
-            "QLabel { background:#f4f4f4; border:1px dashed #bbb; border-radius:6px; }"
+            "QLabel { background:#181818; border:1px dashed #3a3a3a; "
+            "border-radius:6px; color:#9a9a9a; }"
         )
         self.image_label.setAcceptDrops(True)
         self.attach_btn = QPushButton("Choose…")

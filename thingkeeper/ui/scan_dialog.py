@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 
 from ..repository import Item
 from ..scanner import lookup_serial
+from .theme import DANGER, SUCCESS
 
 
 class ScanDialog(QDialog):
@@ -43,7 +44,7 @@ class ScanDialog(QDialog):
             "just leave this window focused."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color:#666;")
+        hint.setStyleSheet("color:#9a9a9a;")
 
         self.serial_edit = QLineEdit()
         self.serial_edit.setPlaceholderText("Serial number…")
@@ -81,7 +82,7 @@ class ScanDialog(QDialog):
     # ---------------------------------------------------------------- logic
     def _set_status(self, text: str, ok: bool) -> None:
         self.status_label.setText(text)
-        color = "#1a7a1a" if ok else "#a02020"
+        color = SUCCESS if ok else DANGER
         self.status_label.setStyleSheet(f"color:{color}; font-weight:bold;")
 
     def _on_lookup(self) -> None:

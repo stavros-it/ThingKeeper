@@ -9,13 +9,15 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont, QPainter, QPen
 from PyQt6.QtWidgets import QWidget
 
-pg.setConfigOption("background", "white")
-pg.setConfigOption("foreground", "#333333")
+from .theme import ACCENT, BG_WINDOW, TEXT
+
+pg.setConfigOption("background", BG_WINDOW)
+pg.setConfigOption("foreground", TEXT)
 
 _PALETTE = [
-    "#305496", "#5b9bd5", "#70ad47", "#ffc000", "#ed7d31",
-    "#264478", "#9e480e", "#636363", "#997300", "#43682b",
-    "#a5a5a5", "#264653", "#2a9d8f", "#e9c46a", "#f4a261",
+    "#3b82f6", "#60a5fa", "#4ade80", "#fbbf24", "#f87171",
+    "#a78bfa", "#22d3ee", "#fb923c", "#94a3b8", "#facc15",
+    "#34d399", "#264653", "#2a9d8f", "#e9c46a", "#f4a261",
 ]
 
 
@@ -26,19 +28,19 @@ class BarChartWidget(pg.PlotWidget):
         super().__init__(parent)
         self.setMouseEnabled(False, False)
         self.hideButtons()
-        self.showGrid(x=False, y=True, alpha=0.3)
+        self.showGrid(x=False, y=True, alpha=0.25)
 
     def set_data(self, title: str, labels: list[str], values: list[float]) -> None:
         self.clear()
         if not values:
-            self.setTitle(f"{title} — no data")
+            self.setTitle(f"{title} - no data")
             return
         self.setTitle(title)
         bg = pg.BarGraphItem(
             x=list(range(len(values))),
             height=values,
             width=0.6,
-            brush=QColor("#305496"),
+            brush=QColor(ACCENT),
         )
         self.addItem(bg)
         ax = self.getAxis("bottom")
@@ -96,7 +98,7 @@ class PieChartWidget(QWidget):
             angle -= span
 
         # Donut hole.
-        painter.setBrush(QColor("white"))
+        painter.setBrush(QColor(BG_WINDOW))
         painter.drawEllipse(
             int(cx - radius * 0.45), int(cy - radius * 0.45),
             int(radius * 0.9), int(radius * 0.9),
@@ -120,7 +122,7 @@ class PieChartWidget(QWidget):
             painter.setBrush(QColor(_PALETTE[i % len(_PALETTE)]))
             painter.setPen(QPen(Qt.PenStyle.NoPen))
             painter.drawRect(x, y + 2, 10, 10)
-            painter.setPen(QColor("#333333"))
+            painter.setPen(QColor(TEXT))
             pct = (self._values[i] / total) * 100 if total else 0
             text = f"{label} ({pct:.0f}%)" if len(label) < 20 else f"{label[:17]}… ({pct:.0f}%)"
             painter.drawText(x + 16, y, 200, line_h, Qt.AlignmentFlag.AlignVCenter, text)

@@ -24,6 +24,7 @@ from ..repository import (
     list_loans,
     return_loan,
 )
+from .theme import DANGER
 
 _COLUMNS = [
     ("Loan ID", 60),
@@ -116,7 +117,7 @@ class LoansDialog(QDialog):
             for col, value in enumerate(cells):
                 cell = QTableWidgetItem(value)
                 if col == 5 and loan.is_open and loan.due_on and loan.due_on < today_str:
-                    cell.setForeground(QColor("#a02020"))
+                    cell.setForeground(QColor(DANGER))
                     f = cell.font()
                     f.setBold(True)
                     cell.setFont(f)

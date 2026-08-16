@@ -247,7 +247,7 @@ ThingKeeper/
         ├── trash_dialog.py      # view / restore / purge soft-deleted items
         ├── integrity_dialog.py  # data integrity check + cleanup UI
         ├── settings_dialog.py   # backup folder, retention, auto-backup interval
-        ├── theme.py             # light/dark palettes + QSS stylesheet
+        ├── theme.py             # dark palette + QSS stylesheet + semantic colors
         └── reports_dialog.py    # PDF report dialog
 ```
 
@@ -265,7 +265,7 @@ tests/
     ├── test_commands.py       # undo/redo command pattern + UndoStack
     ├── test_cli.py            # `python -m thingkeeper --report PATH`
     ├── test_ui.py             # MainWindow + all dialogs (offscreen)
-    └── test_theme.py          # palettes, theme switching, View → Theme menu
+    └── test_theme.py          # dark palette, styling, Fusion style
 ```
 
 Run with `python -m pytest tests/ -q`.

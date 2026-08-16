@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import integrity
+from .theme import DANGER, SUCCESS
 
 
 class IntegrityDialog(QDialog):
@@ -57,7 +58,7 @@ class IntegrityDialog(QDialog):
         )
         self.summary.setStyleSheet(
             "font-weight: bold; font-size: 13px; color: "
-            + ("#1a7a1a" if self._report.ok else "#a02020")
+            + (SUCCESS if self._report.ok else DANGER)
         )
         lines: list[str] = []
         if self._report.missing_item_images:

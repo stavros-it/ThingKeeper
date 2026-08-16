@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings, Qt, QTimer
-from PyQt6.QtGui import QAction, QActionGroup, QColor, QKeySequence
+from PyQt6.QtGui import QAction, QColor, QKeySequence
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -74,6 +74,13 @@ from .item_dialog import ItemDialog
 from .reports_dialog import ReportsDialog
 from .scan_dialog import ScanDialog
 from .settings_dialog import SettingsDialog
+from .theme import (
+    DANGER,
+    DANGER_BG,
+    STATUS_COLORS,
+    TEXT,
+    WARNING,
+)
 from .trash_dialog import TrashDialog
 
 COLUMNS = [
@@ -90,14 +97,6 @@ COLUMNS = [
     ("Warranty", 100),
     ("Store", 100),
 ]
-
-STATUS_COLORS = {
-    "AVAILABLE": "#1a7a1a",
-    "IN USE": "#1f5fa8",
-    "LOANED": "#9a6a00",
-    "BROKEN": "#a02020",
-    "SOLD": "#666666",
-}
 
 _SETTINGS_FILTERS = "filters/saved"
 _SETTINGS_RECENT_IMP = "recent/imports"
@@ -361,20 +360,6 @@ class MainWindow(QMainWindow):
         self._add_action(view_menu, "&Trash…", self.show_trash)
         view_menu.addSeparator()
         self._add_action(view_menu, "&Columns…", self._show_column_menu_at_zero)
-        view_menu.addSeparator()
-        theme_menu = view_menu.addMenu("&Theme")
-        self._theme_group = QActionGroup(self)
-        self._theme_group.setExclusive(True)
-        for label, mode in [
-            ("Follow &system", "system"),
-            ("&Light", "light"),
-            ("&Dark", "dark"),
-        ]:
-            act = QAction(label, self, checkable=True)
-            act.triggered.connect(lambda _checked, m=mode: self._set_theme(m))
-            self._theme_group.addAction(act)
-            theme_menu.addAction(act)
-        self._refresh_theme_actions()
         loans_menu = mb.addMenu("&Loans")
 
         self._add_action(loans_menu, "&Loan selected item…", self.loan_selected, "Ctrl+L")
@@ -483,21 +468,21 @@ class MainWindow(QMainWindow):
                     except (ValueError, TypeError):
                         pass
                 if col == 6:
-                    color = STATUS_COLORS.get(it.status, "#333333")
+                    color = STATUS_COLORS.get(it.status, TEXT)
                     item.setForeground(QColor(color))
                     f = item.font()
                     f.setBold(True)
                     item.setFont(f)
                 if col == 10 and it.id in expired_ids:
-                    item.setForeground(QColor("#a02020"))
+                    item.setForeground(QColor(DANGER))
                     f = item.font()
                     f.setBold(True)
                     item.setFont(f)
                 elif col == 10 and it.id in soon_ids:
-                    item.setForeground(QColor("#9a6a00"))
+                    item.setForeground(QColor(WARNING))
                 # Overdue loan: highlight the status cell with a red background.
                 if col == 6 and it.id in overdue_loan_ids:
-                    item.setBackground(QColor("#ffe0e0"))
+                    item.setBackground(QColor(DANGER_BG))
                 self.table.setItem(row, col, item)
         self.table.setSortingEnabled(True)
         self._update_actions()
@@ -1087,25 +1072,6 @@ class MainWindow(QMainWindow):
 
     def _on_auto_backup_failed(self, msg: str) -> None:
         self.statusBar().showMessage(f"Auto-backup failed: {msg}", 8000)
-
-    # --------------------------------------------------------------- theme
-    def _refresh_theme_actions(self) -> None:
-        from .theme import get_theme_mode
-        current = get_theme_mode().value
-        for act in self._theme_group.actions():
-            mode = act.text().replace("&", "").lower()
-            if mode == "follow system":
-                mode = "system"
-            act.setChecked(mode == current)
-
-    def _set_theme(self, mode: str) -> None:
-        from .theme import ThemeMode, refresh_theme, set_theme_mode
-        try:
-            tm = ThemeMode(mode)
-        except ValueError:
-            return
-        set_theme_mode(tm)
-        refresh_theme()
 
     def keyPressEvent(self, event) -> None:  # noqa: N802 - Qt override
         if event.matches(QKeySequence.StandardKey.Find):

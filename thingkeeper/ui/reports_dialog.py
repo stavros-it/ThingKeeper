@@ -38,7 +38,7 @@ class ReportsDialog(QDialog):
             "and warranty alerts (expired + expiring soon)."
         )
         desc.setWordWrap(True)
-        desc.setStyleSheet("color:#666;")
+        desc.setStyleSheet("color:#9a9a9a;")
 
         self.path_edit = QLineEdit()
         self.path_edit.setPlaceholderText("Output .pdf path…")

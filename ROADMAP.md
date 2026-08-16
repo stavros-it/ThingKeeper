@@ -112,8 +112,9 @@ maintainable desktop app.
   installed on Linux
 - ~~**Installer packages** — MSIX / Inno Setup on Windows, `.dmg` on macOS~~ (Deferred — see Long-term)
 - ~~**Settings dialog** — data dir, backup folder, warranty soon-days, theme~~ (Done in v0.5; backup folder + retention + auto-backup interval)
-- **Dark mode** — `View → Theme` with Follow system / Light / Dark; `theme.py`
-  module with QSS stylesheet
+- **Dark theme** — polished dark UI with Fusion style, accent highlights, and
+  semantic colors (success/warning/danger/info); `theme.py` with QSS stylesheet;
+  STATUS_COLORS centralized; applied unconditionally at startup
 - ~~**Internationalisation** — extract strings, add Greek / English locales~~ (Deferred — see Long-term)
 - **Accessibility pass** — status tips on all toolbar actions; accessible names
   and descriptions on search box + items table; keyboard shortcuts throughout

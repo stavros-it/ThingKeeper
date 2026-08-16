@@ -63,7 +63,7 @@ class SettingsDialog(QDialog):
 
         last = backup_mod.get_last_run()
         last_label = QLabel(f"Last backup: {last or 'never'}")
-        last_label.setStyleSheet("color: #666;")
+        last_label.setStyleSheet("color: #9a9a9a;")
         form.addRow("", last_label)
 
         v.addLayout(form)

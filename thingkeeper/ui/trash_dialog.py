@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ..repository import hard_delete, list_trash, restore_item
+from .theme import DANGER
 
 _COLUMNS = [
     ("ID", 50),
@@ -46,7 +47,7 @@ class TrashDialog(QDialog):
         info = QLabel(
             "Deleted items are kept here. They are automatically purged after 30 days."
         )
-        info.setStyleSheet("color: #666;")
+        info.setStyleSheet("color: #9a9a9a;")
 
         self.table = QTableWidget(0, len(_COLUMNS))
         self.table.setHorizontalHeaderLabels([c[0] for c in _COLUMNS])
@@ -98,7 +99,7 @@ class TrashDialog(QDialog):
             for col, value in enumerate(cells):
                 item = QTableWidgetItem(value)
                 if col == 1:
-                    item.setForeground(QColor("#a02020"))
+                    item.setForeground(QColor(DANGER))
                 self.table.setItem(row, col, item)
 
     def _selected_ids(self) -> list[int]:

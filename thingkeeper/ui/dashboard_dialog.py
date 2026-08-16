@@ -56,10 +56,10 @@ class DashboardDialog(QDialog):
         for label, value in stats:
             cell = QVBoxLayout()
             v = QLabel(value)
-            v.setStyleSheet("font-size: 18px; font-weight: bold; color: #305496;")
-            lbl = QLabel(label)
-            lbl.setStyleSheet("color: #666; font-size: 11px;")
+            v.setStyleSheet("font-size: 20px; font-weight: 700;")
             v.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl = QLabel(label)
+            lbl.setStyleSheet("font-size: 11px; color: #9a9a9a; letter-spacing: 0.5px;")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             cell.addWidget(v)
             cell.addWidget(lbl)
