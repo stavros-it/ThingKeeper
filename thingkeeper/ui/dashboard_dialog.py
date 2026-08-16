@@ -73,9 +73,11 @@ class DashboardDialog(QDialog):
         self.value_chart = BarChartWidget()
 
         charts_grid = QGridLayout()
+        charts_grid.setVerticalSpacing(60)
         charts_grid.addWidget(self.qty_chart, 0, 0)
         charts_grid.addWidget(self.status_chart, 0, 1)
         charts_grid.addWidget(self.value_chart, 1, 0, 1, 2)
+        charts_grid.setRowStretch(1, 2)
 
         refresh_btn = QPushButton("Refresh")
         refresh_btn.clicked.connect(self.refresh)

@@ -68,7 +68,7 @@ class BarChartWidget(pg.PlotWidget):
         wrapped = [(i, _wrap_label(lbl)) for i, lbl in enumerate(labels)]
         ax.setTicks([wrapped])
         ax.setTickFont(QFont("Segoe UI", 9))
-        ax.setStyle(hideOverlappingLabels=False)
+        ax.setStyle(hideOverlappingLabels=False, tickTextHeight=36, autoExpandTextSpace=True)
         self.getAxis("left").setLabel("Count")
 
 
