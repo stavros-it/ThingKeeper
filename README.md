@@ -71,9 +71,14 @@ pip install -r requirements.txt
 python main.py
 ```
 
-On Windows you can also double-click **`launch.pyw`** (or pin it to the
-taskbar) — it uses `pythonw.exe`, so the app starts with no console window
-in the background.
+On Windows you can also double-click **`launch.bat`** — it locates
+`pythonw.exe` and starts the app with no console window in the background.
+Pin `launch.bat` (or a shortcut to it) to the taskbar for one-click access.
+
+If `launch.bat` doesn't suit you, double-clicking `launch.pyw` works once
+`.pyw` is associated with `pythonw.exe` (the Windows **py launcher** can
+sometimes fail to detect a user-scoped Python install; `launch.bat`
+ sidesteps that).
 
 On first launch ThingKeeper creates a SQLite database at `data/thingkeeper.db` and an
 `data/attachments/` folder for images — both are git-ignored so your inventory stays
