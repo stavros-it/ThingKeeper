@@ -100,6 +100,12 @@ ThingKeeper/
 
 Proprietary (© 2026 Stavros Antoniou, all rights reserved) — see [LICENSE](LICENSE).
 
+## AI assistance
+
+Parts of this codebase, documentation and commit messages were generated
+or refined with the help of AI tools. All output was reviewed and accepted
+by the maintainer before being committed.
+
 ## Project docs
 
 - [AGENTS.md](AGENTS.md) — workflow and conventions for AI assistants and contributors.
