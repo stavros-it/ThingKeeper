@@ -21,33 +21,11 @@ _PALETTE = [
 ]
 
 
-class _RotatedAxis(pg.AxisItem):
-    """Bottom axis with rotated tick labels (45 degrees) for long text."""
-
-    def drawPicture(self, painter, axisSpec, tickSpecs, textSpecs):  # noqa: N802 - Qt override
-        from PyQt6.QtCore import QPointF, QRectF
-        from PyQt6.QtGui import QTransform
-
-        for rect, flags, text in textSpecs:
-            painter.save()
-            painter.setPen(QPen(TEXT))
-            painter.translate(QPointF(rect.center().x(), rect.bottom() + 4))
-            painter.rotate(-45)
-            painter.drawText(
-                QRectF(-100, -2, 200, rect.height() + 4),
-                int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop),
-                text,
-            )
-            painter.setTransform(QTransform())
-            painter.restore()
-        pg.AxisItem.drawPicture(self, painter, axisSpec, tickSpecs, [])
-
-
 class BarChartWidget(pg.PlotWidget):
     """Bar chart for counts or values by category."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent, axisItems={"bottom": _RotatedAxis(orientation="bottom")})
+        super().__init__(parent)
         self.setMouseEnabled(False, False)
         self.hideButtons()
         self.showGrid(x=False, y=True, alpha=0.25)
@@ -66,10 +44,18 @@ class BarChartWidget(pg.PlotWidget):
         )
         self.addItem(bg)
         ax = self.getAxis("bottom")
-        ax.setTicks([[(i, lbl) for i, lbl in enumerate(labels)]])
-        ax.setTickFont(QFont("Segoe UI", 9))
-        ax.setStyle(hideOverlappingLabels=False)
+        ax.setTicks([[(i, "") for i in range(len(labels))]])
+        ax.setStyle(showValues=False)
         self.getAxis("left").setLabel("Count")
+        max_val = max(values) if values else 0
+        for i, lbl in enumerate(labels):
+            txt = pg.TextItem(lbl, color=TEXT, anchor=(1, 0))
+            txt.setFont(QFont("Segoe UI", 9))
+            txt.setAngle(-45)
+            txt.setPos(i, -0.02 * max_val)
+            self.addItem(txt)
+        bottom = self.getAxis("bottom")
+        bottom.setStyle(tickLength=0)
 
 
 class PieChartWidget(QWidget):
