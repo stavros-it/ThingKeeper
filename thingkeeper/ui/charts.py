@@ -179,7 +179,7 @@ class PieChartWidget(QWidget):
         self._labels: list[str] = []
         self._values: list[float] = []
         self._title: str = ""
-        self.setMinimumSize(300, 300)
+        self.setMinimumHeight(250)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     def set_data(self, title: str, labels: list[str], values: list[float]) -> None:
@@ -214,7 +214,7 @@ class PieChartWidget(QWidget):
             painter.setBrush(color)
             painter.setPen(QPen(Qt.PenStyle.NoPen))
             painter.drawPie(
-                cx - radius, cy - radius, int(radius * 2), int(radius * 2),
+                int(cx - radius), int(cy - radius), int(radius * 2), int(radius * 2),
                 int(angle * 16), int(-span * 16),
             )
             angle -= span
