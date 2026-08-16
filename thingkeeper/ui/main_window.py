@@ -91,9 +91,9 @@ COLUMNS = [
     ("Type", 120),
     ("Brand", 110),
     ("Model", 240),
+    ("Status", 100),
     ("Comments", 200),
     ("Serial", 140),
-    ("Status", 100),
     ("Qty", 50),
     ("Location", 120),
     ("Purchase", 100),
@@ -517,9 +517,9 @@ class MainWindow(QMainWindow):
                 it.type,
                 it.brand,
                 it.model,
+                it.status,
                 it.info,
                 it.serial,
-                it.status,
                 str(it.quantity),
                 it.location,
                 _fmt_date(it.purchase_date),
@@ -535,7 +535,7 @@ class MainWindow(QMainWindow):
                         item.setData(Qt.ItemDataRole.UserRole, int(value))
                     except (ValueError, TypeError):
                         pass
-                if col == 7:
+                if col == 5:
                     color = STATUS_COLORS.get(it.status, TEXT)
                     item.setForeground(QColor(color))
                     f = item.font()
@@ -553,7 +553,7 @@ class MainWindow(QMainWindow):
                         item.setToolTip(w_tip)
                     item.setData(Qt.ItemDataRole.UserRole, it.warranty_end or "")
                 # Overdue loan: highlight the status cell with a red background.
-                if col == 7 and it.id in overdue_loan_ids:
+                if col == 5 and it.id in overdue_loan_ids:
                     item.setBackground(QColor(DANGER_BG))
                 # Damaged item: make all text in the row red.
                 if it.status == "BROKEN":
