@@ -91,6 +91,7 @@ COLUMNS = [
     ("Type", 120),
     ("Brand", 110),
     ("Model", 240),
+    ("Comments", 200),
     ("Serial", 140),
     ("Status", 100),
     ("Qty", 50),
@@ -98,7 +99,6 @@ COLUMNS = [
     ("Purchase", 100),
     ("Warranty", 100),
     ("Store", 100),
-    ("Comments", 200),
 ]
 
 _SETTINGS_FILTERS = "filters/saved"
@@ -517,6 +517,7 @@ class MainWindow(QMainWindow):
                 it.type,
                 it.brand,
                 it.model,
+                it.info,
                 it.serial,
                 it.status,
                 str(it.quantity),
@@ -524,24 +525,23 @@ class MainWindow(QMainWindow):
                 _fmt_date(it.purchase_date),
                 w_disp,
                 it.store,
-                it.info,
             ]
             for col, value in enumerate(cells):
                 item = QTableWidgetItem(value)
-                if col in (0, 7):
+                if col in (0, 8):
                     item.setData(Qt.ItemDataRole.DisplayRole, value)
                     item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     try:
                         item.setData(Qt.ItemDataRole.UserRole, int(value))
                     except (ValueError, TypeError):
                         pass
-                if col == 6:
+                if col == 7:
                     color = STATUS_COLORS.get(it.status, TEXT)
                     item.setForeground(QColor(color))
                     f = item.font()
                     f.setBold(True)
                     item.setFont(f)
-                if col == 10:
+                if col == 11:
                     item.setForeground(QColor(w_fg))
                     if w_bg:
                         item.setBackground(QColor(w_bg))
@@ -553,7 +553,7 @@ class MainWindow(QMainWindow):
                         item.setToolTip(w_tip)
                     item.setData(Qt.ItemDataRole.UserRole, it.warranty_end or "")
                 # Overdue loan: highlight the status cell with a red background.
-                if col == 6 and it.id in overdue_loan_ids:
+                if col == 7 and it.id in overdue_loan_ids:
                     item.setBackground(QColor(DANGER_BG))
                 self.table.setItem(row, col, item)
         if self._first_populate:
