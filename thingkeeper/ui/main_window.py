@@ -509,7 +509,18 @@ class MainWindow(QMainWindow):
 
     def _selected_items(self) -> list[Item]:
         rows = {idx.row() for idx in self.table.selectionModel().selectedRows()}
-        return [self._items[r] for r in sorted(rows)]
+        result: list[Item] = []
+        for r in sorted(rows):
+            id_item = self.table.item(r, 0)
+            if id_item is None:
+                continue
+            item_id = id_item.data(Qt.ItemDataRole.UserRole)
+            if item_id is None:
+                continue
+            found = get_item(int(item_id))
+            if found is not None:
+                result.append(found)
+        return result
 
     def new_item(self) -> None:
         dlg = ItemDialog(self)
