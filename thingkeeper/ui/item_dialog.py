@@ -88,6 +88,7 @@ class ItemDialog(QDialog):
         self.purchase_edit.setCalendarPopup(True)
         self.purchase_edit.setDisplayFormat("yyyy-MM-dd")
         self.purchase_edit.setDate(date.today())
+        self.purchase_edit.dateChanged.connect(self._on_purchase_changed)
 
         self.warranty_edit = QDateEdit()
         self.warranty_edit.setCalendarPopup(True)
@@ -187,6 +188,18 @@ class ItemDialog(QDialog):
 
     def _on_warranty_toggled(self, checked: bool) -> None:
         self.warranty_edit.setEnabled(checked)
+
+    def _on_purchase_changed(self, new_date) -> None:
+        """Auto-set warranty to 2 years after purchase if warranty is off
+        or still equals the previous auto-calculated value."""
+        from PyQt6.QtCore import QDate
+
+        two_years = QDate(new_date.addYears(2))
+        if not self.warranty_check.isChecked():
+            self.warranty_check.setChecked(True)
+            self.warranty_edit.setDate(two_years)
+        elif self.warranty_edit.date() == new_date:
+            self.warranty_edit.setDate(two_years)
 
     # ------------------------------------------------------------- behaviour
     def _load_item(self, item: Item) -> None:
