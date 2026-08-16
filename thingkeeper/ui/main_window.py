@@ -264,7 +264,7 @@ class MainWindow(QMainWindow):
         header = self.table.horizontalHeader()
         header.setSectionsMovable(True)
         header.setStretchLastSection(False)
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setMinimumSectionSize(60)
         header.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         header.customContextMenuRequested.connect(self._show_column_menu)
@@ -502,6 +502,7 @@ class MainWindow(QMainWindow):
 
     def _populate_table(self, items: list[Item]) -> None:
         self.table.setSortingEnabled(False)
+        self.table.setUpdatesEnabled(False)
         self.table.setRowCount(len(items))
         overdue_loan_ids = overdue_loan_item_ids()
 
@@ -551,6 +552,8 @@ class MainWindow(QMainWindow):
                 if col == 6 and it.id in overdue_loan_ids:
                     item.setBackground(QColor(DANGER_BG))
                 self.table.setItem(row, col, item)
+        self.table.resizeColumnsToContents()
+        self.table.setUpdatesEnabled(True)
         self.table.setSortingEnabled(True)
         self._update_actions()
 
