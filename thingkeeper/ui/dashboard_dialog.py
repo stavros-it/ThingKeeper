@@ -33,8 +33,8 @@ class DashboardDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("ThingKeeper — Dashboard")
-        self.resize(900, 700)
-        self.setMinimumSize(700, 500)
+        self.resize(1400, 1000)
+        self.setMinimumSize(1100, 800)
         self._build_ui()
         self.refresh()
 
