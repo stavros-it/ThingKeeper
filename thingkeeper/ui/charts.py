@@ -198,8 +198,7 @@ class PieChartWidget(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
         total = sum(self._values)
-        cx, cy = w // 2, h // 2 - 10
-        radius = min(w, h) * 0.35
+        n = len(self._labels)
 
         font = QFont()
         font.setPointSize(11)
@@ -211,6 +210,15 @@ class PieChartWidget(QWidget):
         if total == 0:
             painter.end()
             return
+
+        # Reserve space for legend at the bottom.
+        line_h = 16
+        legend_cols = max(1, math.ceil(n / 3))
+        legend_rows = math.ceil(n / legend_cols)
+        legend_h = legend_rows * line_h + 10
+        pie_area_h = h - 28 - legend_h
+        cx, cy = w // 2, 28 + pie_area_h // 2
+        radius = min(w, pie_area_h) * 0.42
 
         angle = 90.0
         for i, val in enumerate(self._values):
@@ -233,18 +241,13 @@ class PieChartWidget(QWidget):
         font.setPointSize(9)
         font.setBold(False)
         painter.setFont(font)
-        legend_y = cy + int(radius) + 15
-        line_h = 16
-        n = len(self._labels)
-        cols = max(1, math.ceil(n / 4))
-        per_col = math.ceil(n / cols)
+        per_col = math.ceil(n / legend_cols)
+        legend_y = h - legend_h + 5
         for i, label in enumerate(self._labels):
             col = i // per_col
             row = i % per_col
-            x = col * (w // cols) + 10
+            x = col * (w // legend_cols) + 10
             y = legend_y + row * line_h
-            if y > h - line_h:
-                continue
             color_hex = self._color_for(i, label)
             painter.setBrush(QColor(color_hex))
             painter.setPen(QPen(Qt.PenStyle.NoPen))
