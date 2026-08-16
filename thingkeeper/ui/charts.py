@@ -198,7 +198,6 @@ class PieChartWidget(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
         total = sum(self._values)
-        n = len(self._labels)
 
         font = QFont()
         font.setPointSize(11)
@@ -211,11 +210,9 @@ class PieChartWidget(QWidget):
             painter.end()
             return
 
-        # Reserve space for legend at the bottom.
-        line_h = 16
-        legend_cols = max(1, math.ceil(n / 3))
-        legend_rows = math.ceil(n / legend_cols)
-        legend_h = legend_rows * line_h + 10
+        # Reserve space for a single-row horizontal legend at the bottom.
+        line_h = 18
+        legend_h = line_h + 8
         pie_area_h = h - 28 - legend_h
         cx, cy = w // 2, 28 + pie_area_h // 2
         radius = min(w, pie_area_h) * 0.42
@@ -230,6 +227,23 @@ class PieChartWidget(QWidget):
                 int(cx - radius), int(cy - radius), int(radius * 2), int(radius * 2),
                 int(angle * 16), int(-span * 16),
             )
+
+            # Draw percentage inside the slice if it is big enough.
+            mid = math.radians(angle - span / 2)
+            pct = (val / total) * 100 if total else 0
+            if pct >= 5:
+                lx = int(cx + (radius * 0.65) * math.cos(mid))
+                ly = int(cy - (radius * 0.65) * math.sin(mid))
+                painter.setPen(QColor(TEXT_BRIGHT))
+                slice_font = QFont()
+                slice_font.setPointSize(9)
+                slice_font.setBold(True)
+                painter.setFont(slice_font)
+                painter.drawText(
+                    lx - 20, ly - 8, 40, 16,
+                    Qt.AlignmentFlag.AlignCenter, f"{pct:.0f}%",
+                )
+
             angle -= span
 
         painter.setBrush(QColor(BG_WINDOW))
@@ -238,23 +252,30 @@ class PieChartWidget(QWidget):
             int(radius * 0.9), int(radius * 0.9),
         )
 
+        # Horizontal legend: all items in a single row at the bottom.
         font.setPointSize(9)
         font.setBold(False)
         painter.setFont(font)
-        per_col = math.ceil(n / legend_cols)
-        legend_y = h - legend_h + 5
+        fm = painter.fontMetrics()
+        legend_y = h - legend_h
+        items: list[tuple[str, str, float]] = []
         for i, label in enumerate(self._labels):
-            col = i // per_col
-            row = i % per_col
-            x = col * (w // legend_cols) + 10
-            y = legend_y + row * line_h
+            pct = (self._values[i] / total) * 100 if total else 0
+            text = f"{label} {pct:.0f}%"
             color_hex = self._color_for(i, label)
+            items.append((text, color_hex, pct))
+
+        total_item_w = sum(fm.horizontalAdvance(text) + 26 for text, _, _ in items)
+        x = max(4, (w - total_item_w) // 2)
+        for text, color_hex, _pct in items:
             painter.setBrush(QColor(color_hex))
             painter.setPen(QPen(Qt.PenStyle.NoPen))
-            painter.drawRect(x, y + 2, 10, 10)
+            painter.drawRect(x, legend_y + 3, 10, 10)
             painter.setPen(QColor(TEXT))
-            pct = (self._values[i] / total) * 100 if total else 0
-            text = f"{label} ({pct:.0f}%)" if len(label) < 20 else f"{label[:17]}... ({pct:.0f}%)"
-            painter.drawText(x + 16, y, 200, line_h, Qt.AlignmentFlag.AlignVCenter, text)
+            painter.drawText(
+                x + 14, legend_y, fm.horizontalAdvance(text) + 4, line_h,
+                Qt.AlignmentFlag.AlignVCenter, text,
+            )
+            x += fm.horizontalAdvance(text) + 26
 
         painter.end()
