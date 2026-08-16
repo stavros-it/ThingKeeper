@@ -209,8 +209,8 @@ contacts, categories) is planned in v0.3 — see [ROADMAP.md](ROADMAP.md).
 ```
 ThingKeeper/
 ├── main.py                      # console entry point
-├── launch.pyw                   # no-console entry point (Windows)
-├── pyproject.toml               # packaging + ruff config
+├── launch.pyw                   # no-console entry point (Windows, double-click)
+├── pyproject.toml               # packaging + ruff + pytest config
 ├── requirements.txt             # pinned runtime deps
 ├── README.md                    # user-facing docs
 ├── ROADMAP.md                   # development roadmap
@@ -218,6 +218,10 @@ ThingKeeper/
 ├── AGENTS.md                    # workflow + conventions for contributors
 ├── LICENSE                      # Proprietary
 ├── .gitignore
+├── .github/
+│   └── workflows/
+│       └── ci.yml               # ruff + pytest on Ubuntu + Windows, Python 3.10 + 3.12
+├── tests/                       # pytest + pytest-qt test suite (120 tests)
 └── thingkeeper/
     ├── __init__.py              # version
     ├── __main__.py              # python -m thingkeeper
@@ -430,7 +434,7 @@ This is the pattern used by the smoke tests run during the initial build.
 |-----------------------------------------|--------|
 | Add a new item field                    | `repository.py` (dataclass + schema in `database.py` + importers/exporters + `item_dialog.py`) |
 | Add a new filter                        | `repository.list_items()` + `main_window.py` |
-| Add a new status                        | `config.STATUSES` + `main_window.STATUS_COLORS` |
+| Add a new status                        | `config.STATUSES` + `theme.STATUS_COLORS` |
 | Add a new import format                 | `importers.py` + a menu action in `main_window.py` |
 | Add a new export format                 | `exporters.py` + a menu action in `main_window.py` |
 | Change the DB schema                    | `database.py` migration function + bump `_SCHEMA_VERSION` |

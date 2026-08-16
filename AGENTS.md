@@ -85,8 +85,9 @@ first and `git rm --cached` the file.
 - **No comments** in code unless explicitly requested
 - **Type hints** everywhere; `from __future__ import annotations` at module top
 - **No emojis** in source, docs, or UI strings unless explicitly requested
-- **No hardcoded hex colors** in UI code — centralise in a theme module if
-  theming grows (currently a small `STATUS_COLORS` dict in `main_window.py`)
+- **No hardcoded hex colors** in UI code — all colors live in `thingkeeper/ui/theme.py`
+  (dark palette constants, semantic colors, `STATUS_COLORS` dict). Import from
+  `theme.py` rather than inlining hex values.
 - **No network calls** — ThingKeeper is offline-first; importers/exporters
   read local files only
 - **Dates stored as ISO text** (`YYYY-MM-DD`) in SQLite, normalised on import
@@ -97,5 +98,5 @@ first and `git rm --cached` the file.
 - **Default branch**: `main`
 - **License**: Proprietary (© 2026 Stavros Antoniou, all rights reserved)
 - **CI**: GitHub Actions — `ruff check .` + `python -m pytest tests/ -q` on Ubuntu + Windows, Python 3.10 + 3.12 (`.github/workflows/ci.yml`)
-- **Entry points**: `main.py` (console), `launch.pyw` (no console on Windows),
-  `python -m thingkeeper`
+- **Entry points**: `main.py` (console), `launch.pyw` (no console on Windows, double-click),
+  `python -m thingkeeper [--report PATH.pdf]`

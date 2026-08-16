@@ -100,7 +100,6 @@ new fields default to sensible values (status `AVAILABLE`, quantity `1`).
 | Generate report   | `Ctrl+R`        |
 | Scan serial       | `Ctrl+K`        |
 | Search            | `Ctrl+F`        |
-| Generate report   | `Ctrl+R`        |
 | Refresh           | `F5`            |
 | Quit              | `Ctrl+Q`        |
 
@@ -109,37 +108,41 @@ new fields default to sensible values (status `AVAILABLE`, quantity `1`).
 ```
 ThingKeeper/
 ├── main.py                 # entry point (console)
-├── launch.pyw              # entry point (no console window on Windows)
-├── thingkeeper/
-│   ├── __init__.py
-│   ├── __main__.py
-│   ├── config.py           # paths & constants
-│   ├── database.py         # SQLite connection + schema + migrations
-│   ├── repository.py       # data access (CRUD, multi-image, soft-delete)
-│   ├── commands.py         # undo/redo command pattern + UndoStack
-│   ├── importers.py        # xlsx / .tkz / CSV / encrypted archive import
-│   ├── exporters.py        # .tkz / CSV / xlsx / HTML / PDF / encrypted archive export
-│   ├── backup.py           # timestamped backups + rotation + BackupScheduler
-│   ├── integrity.py        # data integrity check + orphan attachment cleanup
-│   ├── scanner.py          # serial-scan helper
-│   └── ui/
-│       ├── __init__.py
-│       ├── main_window.py       # table, filters, toolbar, undo/redo, saved filters
-│       ├── item_dialog.py       # add/edit (multi-image, price, depreciation)
-│       ├── bulk_edit_dialog.py  # bulk field change
-│       ├── loan_dialog.py       # open a loan for an item
-│       ├── loans_dialog.py      # browse loans, return items
-│       ├── loan_history_dialog.py  # loan history per item
-│       ├── contacts_dialog.py   # manage contacts
-│       ├── dashboard_dialog.py  # charts + summary stats
-│       ├── report_builder_dialog.py  # custom PDF report builder
-│       ├── charts.py            # bar chart (pyqtgraph) + pie chart (QPainter)
-│       ├── scan_dialog.py       # serial scan
-│       ├── trash_dialog.py      # view / restore / purge deleted items
-│       ├── integrity_dialog.py  # data integrity check + cleanup UI
-│       ├── settings_dialog.py   # backup folder, retention, auto-backup interval
-│       ├── theme.py             # dark palette + QSS stylesheet + semantic colors
-│       └── reports_dialog.py    # PDF report
+├── launch.pyw              # entry point (no console window on Windows, double-click)
+├── pyproject.toml          # packaging + ruff + pytest config
+├── .github/workflows/
+│   └── ci.yml              # ruff + pytest on Ubuntu + Windows
+├── tests/                  # 120 pytest tests
+└── thingkeeper/
+    ├── __init__.py
+    ├── __main__.py             # python -m thingkeeper [--report PATH]
+    ├── config.py               # paths & constants
+    ├── database.py             # SQLite connection + schema + migrations
+    ├── repository.py           # data access (CRUD, multi-image, soft-delete, loans, contacts)
+    ├── commands.py             # undo/redo command pattern + UndoStack
+    ├── importers.py            # xlsx / .tkz / CSV / encrypted archive import
+    ├── exporters.py            # .tkz / CSV / xlsx / HTML / PDF / encrypted archive export
+    ├── backup.py               # timestamped backups + rotation + BackupScheduler
+    ├── integrity.py            # data integrity check + orphan attachment cleanup
+    ├── scanner.py              # serial-scan helper
+    └── ui/
+        ├── __init__.py
+        ├── main_window.py           # table, filters, toolbar, undo/redo, saved filters
+        ├── item_dialog.py           # add/edit (multi-image, price, depreciation)
+        ├── bulk_edit_dialog.py      # bulk field change
+        ├── loan_dialog.py           # open a loan for an item
+        ├── loans_dialog.py          # browse loans, return items
+        ├── loan_history_dialog.py   # loan history per item
+        ├── contacts_dialog.py       # manage contacts
+        ├── dashboard_dialog.py      # charts + summary stats
+        ├── report_builder_dialog.py # custom PDF report builder
+        ├── charts.py                # bar chart (pyqtgraph) + pie chart (QPainter)
+        ├── scan_dialog.py           # serial scan
+        ├── trash_dialog.py          # view / restore / purge deleted items
+        ├── integrity_dialog.py      # data integrity check + cleanup UI
+        ├── settings_dialog.py       # backup folder, retention, auto-backup interval
+        ├── theme.py                 # dark palette + QSS stylesheet + semantic colors
+        └── reports_dialog.py        # PDF report
 └── data/                   # runtime data (git-ignored)
     ├── thingkeeper.db
     └── attachments/
