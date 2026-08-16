@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QMainWindow,
@@ -32,6 +33,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from .. import backup as backup_mod
 from .. import config
 from ..commands import (
     BulkUpdateCommand,
@@ -41,8 +43,20 @@ from ..commands import (
     UndoStack,
     UpdateItemCommand,
 )
-from ..exporters import export_archive, export_csv, export_excel, export_html
-from ..importers import import_archive, import_csv, import_excel
+from ..exporters import (
+    export_archive,
+    export_archive_encrypted,
+    export_csv,
+    export_excel,
+    export_html,
+    is_encrypted_archive,
+)
+from ..importers import (
+    import_archive,
+    import_archive_encrypted,
+    import_csv,
+    import_excel,
+)
 from ..repository import (
     Item,
     distinct_values,
@@ -55,9 +69,11 @@ from ..repository import (
     warranty_expiring,
 )
 from .bulk_edit_dialog import BulkEditDialog
+from .integrity_dialog import IntegrityDialog
 from .item_dialog import ItemDialog
 from .reports_dialog import ReportsDialog
 from .scan_dialog import ScanDialog
+from .settings_dialog import SettingsDialog
 from .trash_dialog import TrashDialog
 
 COLUMNS = [
@@ -110,6 +126,11 @@ class MainWindow(QMainWindow):
         self._search_timer.setSingleShot(True)
         self._search_timer.setInterval(200)
         self._search_timer.timeout.connect(self.refresh)
+        self._backup_scheduler = backup_mod.BackupScheduler(self)
+        self._backup_scheduler.backup_created.connect(self._on_auto_backup)
+        self._backup_scheduler.backup_failed.connect(self._on_auto_backup_failed)
+        self._backup_scheduler.start()
+        backup_mod.maybe_auto_backup()
 
     # --------------------------------------------------------------- layout
     def _build_ui(self) -> None:
@@ -283,11 +304,15 @@ class MainWindow(QMainWindow):
         self._imp_menu = file_menu.addMenu("&Import")
         self._add_action(self._imp_menu, "Excel workbook (.xlsx)…", self._import_excel)
         self._add_action(self._imp_menu, "ThingKeeper archive (.tkz)…", self._import_archive)
+        self._add_action(self._imp_menu, "Encrypted archive (.tkz)…",
+                         self._import_archive_encrypted)
         self._add_action(self._imp_menu, "CSV (.csv)…", self._import_csv)
         self._imp_menu.aboutToShow.connect(self._refresh_recent_imports)
 
         self._exp_menu = file_menu.addMenu("&Export")
         self._add_action(self._exp_menu, "ThingKeeper archive (.tkz)…", self._export_archive)
+        self._add_action(self._exp_menu, "Encrypted archive (.tkz)…",
+                         self._export_archive_encrypted)
         self._add_action(self._exp_menu, "Excel workbook (.xlsx)…", self._export_excel)
         self._add_action(self._exp_menu, "CSV (.csv)…", self._export_csv)
         self._add_action(self._exp_menu, "HTML (.html)…", self._export_html)
@@ -319,13 +344,20 @@ class MainWindow(QMainWindow):
         self._add_action(view_menu, "&Trash…", self.show_trash)
         view_menu.addSeparator()
         self._add_action(view_menu, "&Columns…", self._show_column_menu_at_zero)
-
         loans_menu = mb.addMenu("&Loans")
+
         self._add_action(loans_menu, "&Loan selected item…", self.loan_selected, "Ctrl+L")
         self._add_action(loans_menu, "&All loans…", self.show_loans)
         loans_menu.addSeparator()
         self._add_action(loans_menu, "&Contacts…", self.show_contacts)
         self._add_action(loans_menu, "Loan &history for selected…", self.show_loan_history)
+
+        tools_menu = mb.addMenu("&Tools")
+        self._add_action(tools_menu, "&Back up now…", self.backup_now)
+        self._add_action(tools_menu, "&Restore from backup…", self.restore_from_backup)
+        self._add_action(tools_menu, "Data &integrity check…", self.show_integrity)
+        tools_menu.addSeparator()
+        self._add_action(tools_menu, "&Settings…", self.show_settings)
 
         help_menu = mb.addMenu("&Help")
         self._add_action(help_menu, "&About", self._about)
@@ -884,6 +916,64 @@ class MainWindow(QMainWindow):
         self._add_recent(_SETTINGS_RECENT_EXP, path)
         self._run_export(export_html, path, "HTML")
 
+    def _export_archive_encrypted(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export encrypted archive",
+            "thingkeeper_encrypted" + config.ARCHIVE_EXT,
+            f"Encrypted ThingKeeper archive (*{config.ARCHIVE_EXT})",
+        )
+        if not path:
+            return
+        passphrase, ok = QInputDialog.getText(
+            self, "Passphrase",
+            "Enter a passphrase for the encrypted archive:",
+            QLineEdit.EchoMode.Password,
+        )
+        if not ok or not passphrase:
+            return
+        confirm, ok2 = QInputDialog.getText(
+            self, "Confirm passphrase",
+            "Re-enter the passphrase:",
+            QLineEdit.EchoMode.Password,
+        )
+        if not ok2 or confirm != passphrase:
+            QMessageBox.warning(self, "Encrypted export", "Passphrases do not match.")
+            return
+        self._add_recent(_SETTINGS_RECENT_EXP, path)
+        try:
+            export_archive_encrypted(path, passphrase)
+        except Exception as exc:
+            QMessageBox.critical(self, "Export failed", str(exc))
+            return
+        QMessageBox.information(self, "Export", f"Encrypted archive saved to:\n{path}")
+
+    def _import_archive_encrypted(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Import encrypted archive", "",
+            f"ThingKeeper archive (*{config.ARCHIVE_EXT});;All files (*.*)",
+        )
+        if not path:
+            return
+        if not is_encrypted_archive(path):
+            QMessageBox.warning(
+                self, "Encrypted import",
+                "This file is not an encrypted ThingKeeper archive.\n"
+                "Use the regular archive importer instead.",
+            )
+            return
+        passphrase, ok = QInputDialog.getText(
+            self, "Passphrase",
+            "Enter the passphrase for this archive:",
+            QLineEdit.EchoMode.Password,
+        )
+        if not ok or not passphrase:
+            return
+        self._add_recent(_SETTINGS_RECENT_IMP, path)
+        self._run_import(
+            lambda: import_archive_encrypted(path, passphrase),
+            f"Restored from {Path(path).name}",
+        )
+
     def _run_export(self, fn, path: str, label: str) -> None:
         try:
             fn(path)
@@ -916,6 +1006,56 @@ class MainWindow(QMainWindow):
             "<p>Desktop inventory app for gadgets, appliances and hardware parts.</p>"
             "<p>PyQt6 + SQLite. Proprietary license (© 2026 Stavros Antoniou).</p>"
         )
+
+    # ----------------------------------------------------------- tools menu
+    def backup_now(self) -> None:
+        try:
+            path = backup_mod.create_backup()
+        except Exception as exc:
+            QMessageBox.critical(self, "Backup failed", str(exc))
+            return
+        QMessageBox.information(
+            self, "Backup",
+            f"Backup created:\n{path}\n\n"
+            f"Folder: {backup_mod.get_backup_dir()}",
+        )
+
+    def restore_from_backup(self) -> None:
+        d = backup_mod.get_backup_dir()
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Restore from backup", str(d),
+            f"ThingKeeper archive (*{config.ARCHIVE_EXT})",
+        )
+        if not path:
+            return
+        confirm = QMessageBox.question(
+            self, "Restore backup",
+            f"Restore from {Path(path).name}?\n\n"
+            "This will add items from the archive to the current inventory. "
+            "Existing items are not removed.",
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+        self._add_recent(_SETTINGS_RECENT_IMP, path)
+        self._run_import(
+            lambda: import_archive(path),
+            f"Restored from {Path(path).name}",
+        )
+
+    def show_integrity(self) -> None:
+        dlg = IntegrityDialog(self)
+        dlg.exec()
+
+    def show_settings(self) -> None:
+        dlg = SettingsDialog(self)
+        if dlg.exec() == SettingsDialog.DialogCode.Accepted:
+            self._backup_scheduler.restart()
+
+    def _on_auto_backup(self, path: str) -> None:
+        self.statusBar().showMessage(f"Auto-backup created: {path}", 5000)
+
+    def _on_auto_backup_failed(self, msg: str) -> None:
+        self.statusBar().showMessage(f"Auto-backup failed: {msg}", 8000)
 
     def keyPressEvent(self, event) -> None:  # noqa: N802 - Qt override
         if event.matches(QKeySequence.StandardKey.Find):

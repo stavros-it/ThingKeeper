@@ -33,6 +33,14 @@ single-file storage.
   straight-line depreciation estimates in the dashboard and PDF report.
 - **HTML export** — standalone HTML file for easy sharing and printing.
 - **CLI report** — `python -m thingkeeper --report PATH.pdf` for scheduled PDF generation.
+- **Automatic backups** — timestamped `.tkz` snapshots at a configurable interval,
+  with rotation (keep last N). `Tools → Back up now` or `Tools → Restore from backup`.
+- **Encrypted archives** — passphrase-protected `.tkz` using Fernet encryption
+  for secure off-site backup.
+- **Data integrity check** — `Tools → Data integrity check` detects orphan
+  attachments, missing image files, and stale database rows; one-click cleanup.
+- **Settings dialog** — `Tools → Settings` for backup folder, retention count,
+  and auto-backup interval.
 - **Import** — Excel (`.xlsx`), compressed JSON archive (`.tkz`), CSV (`.csv`).
 - **Export** — `.tkz` (with attachments), CSV, Excel, PDF report.
 - **Recent files** — recently imported/exported files listed in the File menu.
@@ -103,8 +111,10 @@ ThingKeeper/
 │   ├── database.py         # SQLite connection + schema + migrations
 │   ├── repository.py       # data access (CRUD, multi-image, soft-delete)
 │   ├── commands.py         # undo/redo command pattern + UndoStack
-│   ├── importers.py        # xlsx / .tkz / CSV import
-│   ├── exporters.py        # .tkz / CSV / xlsx / HTML / PDF export
+│   ├── importers.py        # xlsx / .tkz / CSV / encrypted archive import
+│   ├── exporters.py        # .tkz / CSV / xlsx / HTML / PDF / encrypted archive export
+│   ├── backup.py           # timestamped backups + rotation + BackupScheduler
+│   ├── integrity.py        # data integrity check + orphan attachment cleanup
 │   ├── scanner.py          # serial-scan helper
 │   └── ui/
 │       ├── __init__.py
@@ -120,6 +130,8 @@ ThingKeeper/
 │       ├── charts.py            # bar chart (pyqtgraph) + pie chart (QPainter)
 │       ├── scan_dialog.py       # serial scan
 │       ├── trash_dialog.py      # view / restore / purge deleted items
+│       ├── integrity_dialog.py  # data integrity check + cleanup UI
+│       ├── settings_dialog.py   # backup folder, retention, auto-backup interval
 │       └── reports_dialog.py    # PDF report
 └── data/                   # runtime data (git-ignored)
     ├── thingkeeper.db

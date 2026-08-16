@@ -226,12 +226,14 @@ ThingKeeper/
     ├── database.py              # sqlite3 connection + schema + migration runner
     ├── repository.py            # Item, Contact, Loan dataclasses + CRUD + queries
     ├── commands.py              # undo/redo command pattern + UndoStack
-    ├── importers.py             # Excel / archive / CSV import (v0.3 archive format)
-    ├── exporters.py             # archive / CSV / Excel / HTML / PDF export
+    ├── importers.py             # Excel / archive / CSV / encrypted archive import
+    ├── exporters.py             # archive / CSV / Excel / HTML / PDF / encrypted archive export
+    ├── backup.py                # timestamped backups + rotation + BackupScheduler
+    ├── integrity.py             # data integrity check + orphan attachment cleanup
     ├── scanner.py              # serial lookup helper
     └── ui/
         ├── __init__.py
-        ├── main_window.py       # table, filters, menus, toolbar, undo/redo, loans, contacts, dashboard
+        ├── main_window.py       # table, filters, menus, toolbar, undo/redo, loans, contacts, dashboard, tools
         ├── item_dialog.py       # add/edit dialog (multi-image, price, depreciation, warranty)
         ├── bulk_edit_dialog.py  # bulk field change for selected items
         ├── loan_dialog.py       # open a loan for an item
@@ -243,6 +245,8 @@ ThingKeeper/
         ├── charts.py            # bar chart (pyqtgraph) + pie chart (QPainter)
         ├── scan_dialog.py       # serial scan dialog
         ├── trash_dialog.py      # view / restore / purge soft-deleted items
+        ├── integrity_dialog.py  # data integrity check + cleanup UI
+        ├── settings_dialog.py   # backup folder, retention, auto-backup interval
         └── reports_dialog.py    # PDF report dialog
 ```
 
@@ -409,8 +413,10 @@ This is the pattern used by the smoke tests run during the initial build.
 | Add a new status                        | `config.STATUSES` + `main_window.STATUS_COLORS` |
 | Add a new import format                 | `importers.py` + a menu action in `main_window.py` |
 | Add a new export format                 | `exporters.py` + a menu action in `main_window.py` |
-| Change the DB schema                    | `database.py` `_SCHEMA` (note: no migration runner yet — see roadmap v0.5) |
+| Change the DB schema                    | `database.py` migration function + bump `_SCHEMA_VERSION` |
 | Change runtime paths                    | `config.py` |
+| Change backup settings                  | `backup.py` (defaults) or `settings_dialog.py` (UI) |
+| Add a new integrity check               | `integrity.py` + `integrity_dialog.py` |
 | Add a keyboard shortcut                 | the relevant `QAction.setShortcut()` in `main_window.py` |
 | Add a new report                        | `exporters.export_pdf_report()` or a sibling function + `reports_dialog.py` |
 
@@ -418,9 +424,6 @@ This is the pattern used by the smoke tests run during the initial build.
 
 ## 11. Known limitations
 
-- No schema migration runner — schema changes require recreating the DB.
-  Tracked in roadmap v0.5.
-- No undo — deletes are permanent. Tracked in roadmap v0.2.
 - No concurrency between processes — SQLite WAL allows one writer at a time.
   Running two instances on the same DB file simultaneously is unsupported.
 - `My Equipment.xlsx` itself is not in the repo; the maintainer keeps it

@@ -314,3 +314,45 @@ def export_pdf_report(path: str | Path) -> Path:
 
     doc.build(story)
     return path
+
+
+# ----------------------------------------------------------- encrypted archives
+_ENC_MAGIC = b"TKENC1"
+
+
+def _derive_key(passphrase: str) -> bytes:
+    import base64
+    import hashlib
+
+    digest = hashlib.sha256(passphrase.encode("utf-8")).digest()
+    return base64.urlsafe_b64encode(digest)
+
+
+def export_archive_encrypted(path: str | Path, passphrase: str) -> Path:
+    """Write a passphrase-encrypted .tkz archive.
+
+    Layout: 6-byte magic 'TKENC1' + Fernet token of the standard .tkz bytes.
+    """
+    from cryptography.fernet import Fernet
+
+    if not passphrase:
+        raise ValueError("Passphrase is required for encrypted archive")
+    path = Path(path)
+    plain = export_archive(path.with_suffix(".tkz.tmp"))
+    key = _derive_key(passphrase)
+    with open(plain, "rb") as f:
+        data = f.read()
+    token = Fernet(key).encrypt(data)
+    with open(path, "wb") as f:
+        f.write(_ENC_MAGIC + token)
+    plain.unlink(missing_ok=True)
+    return path
+
+
+def is_encrypted_archive(path: str | Path) -> bool:
+    """Return True if the file is an encrypted .tkz archive."""
+    try:
+        with open(path, "rb") as f:
+            return f.read(len(_ENC_MAGIC)) == _ENC_MAGIC
+    except OSError:
+        return False

@@ -84,16 +84,23 @@ maintainable desktop app.
 
 ---
 
-## v0.5 — Maintenance & resilience (Later)
+## v0.5 — Maintenance & resilience (Done)
 
 **Goal:** keep data safe for the long term.
 
-- **Automatic backup** — daily `.tkz` snapshot to a configurable folder
-- **Backup rotation** — keep last N backups, prune older
+- **Automatic backup** — timestamped `.tkz` snapshots to a configurable folder;
+  `BackupScheduler` runs at a user-set interval; `maybe_auto_backup()` on launch
+- **Backup rotation** — keeps last N backups (default 10), prunes older
+- **Backup manager** — `Tools → Back up now…` and `Tools → Restore from backup…`
 - ~~**Schema migrations** — versioned `schema_version` table + migration runner~~ (Done in v0.2)
-- **Data integrity check** — Tools → Verify database (orphan attachments, etc.)
-- **Attachment cleanup** — remove image files no longer referenced by any item
-- **Encrypted archive export** — optional passphrase-protected `.tkz`
+- **Data integrity check** — `Tools → Data integrity check…` detects orphan
+  attachments, missing image files, orphan loan FK references
+- **Attachment cleanup** — removes unreferenced files in `data/attachments/`;
+  purges stale `item_images` rows; clears missing thumbnail paths
+- **Encrypted archive export** — passphrase-protected `.tkz` using Fernet
+  (SHA-256 derived key); `File → Export/Import → Encrypted archive`
+- **Settings dialog** — `Tools → Settings…` for backup folder, retention count,
+  auto-backup interval
 
 ---
 
@@ -103,7 +110,7 @@ maintainable desktop app.
 
 - **Cross-platform testing** — Windows, macOS, Linux
 - **Installer packages** — MSIX / Inno Setup on Windows, `.dmg` on macOS
-- **Settings dialog** — data dir, backup folder, warranty soon-days, theme
+- ~~**Settings dialog** — data dir, backup folder, warranty soon-days, theme~~ (Done in v0.5; backup folder + retention + auto-backup interval)
 - **Dark mode** — follow system palette
 - **Internationalisation** — extract strings, add Greek / English locales
 - **Accessibility pass** — keyboard-only navigation, screen reader labels

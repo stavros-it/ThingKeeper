@@ -306,3 +306,36 @@ def import_csv(path: str | Path) -> ImportResult:
 
     imported = bulk_insert(items)
     return ImportResult(imported, skipped, errors)
+
+
+def import_archive_encrypted(path: str | Path, passphrase: str) -> ImportResult:
+    """Import a passphrase-encrypted .tkz archive.
+
+    Decrypts to a temporary plain archive, then delegates to import_archive.
+    """
+    import tempfile
+
+    from cryptography.fernet import Fernet
+
+    from .exporters import _ENC_MAGIC, _derive_key
+
+    if not passphrase:
+        return ImportResult(0, 0, ["Passphrase is required"])
+    with open(path, "rb") as f:
+        magic = f.read(len(_ENC_MAGIC))
+        if magic != _ENC_MAGIC:
+            return ImportResult(0, 0, ["File is not an encrypted archive"])
+        token = f.read()
+    try:
+        data = Fernet(_derive_key(passphrase)).decrypt(token)
+    except Exception:
+        return ImportResult(0, 0, ["Wrong passphrase or corrupted file"])
+    with tempfile.NamedTemporaryFile(
+        suffix=config.ARCHIVE_EXT, delete=False
+    ) as tmp:
+        tmp.write(data)
+        tmp_path = tmp.name
+    try:
+        return import_archive(tmp_path)
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
