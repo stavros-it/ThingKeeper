@@ -22,13 +22,13 @@ _PALETTE = [
 
 
 class BarChartWidget(pg.PlotWidget):
-    """Bar chart for counts or values by category."""
+    """Horizontal bar chart for counts or values by category."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setMouseEnabled(False, False)
         self.hideButtons()
-        self.showGrid(x=False, y=True, alpha=0.25)
+        self.showGrid(x=True, y=False, alpha=0.25)
 
     def set_data(self, title: str, labels: list[str], values: list[float]) -> None:
         self.clear()
@@ -36,26 +36,21 @@ class BarChartWidget(pg.PlotWidget):
             self.setTitle(f"{title} - no data")
             return
         self.setTitle(title)
+        n = len(values)
         bg = pg.BarGraphItem(
-            x=list(range(len(values))),
-            height=values,
-            width=0.6,
+            x=[0.0] * n,
+            y=list(range(n)),
+            height=0.6,
+            width=values,
             brush=QColor(ACCENT),
         )
         self.addItem(bg)
-        ax = self.getAxis("bottom")
-        ax.setTicks([[(i, "") for i in range(len(labels))]])
-        ax.setStyle(showValues=False)
-        self.getAxis("left").setLabel("Count")
-        max_val = max(values) if values else 0
-        for i, lbl in enumerate(labels):
-            txt = pg.TextItem(lbl, color=TEXT, anchor=(1, 0))
-            txt.setFont(QFont("Segoe UI", 9))
-            txt.setAngle(-45)
-            txt.setPos(i, -0.02 * max_val)
-            self.addItem(txt)
-        bottom = self.getAxis("bottom")
-        bottom.setStyle(tickLength=0)
+        self.invertY(True)
+        ax = self.getAxis("left")
+        ax.setTicks([[(i, lbl) for i, lbl in enumerate(labels)]])
+        ax.setTickFont(QFont("Segoe UI", 9))
+        self.getAxis("bottom").setLabel("Count")
+        self.setLimits(yMin=-1, yMax=n)
 
 
 class PieChartWidget(QWidget):
