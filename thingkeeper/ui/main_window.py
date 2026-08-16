@@ -102,6 +102,17 @@ _SETTINGS_FILTERS = "filters/saved"
 _SETTINGS_RECENT_IMP = "recent/imports"
 _SETTINGS_RECENT_EXP = "recent/exports"
 _SETTINGS_COL_VIS = "columns/visible"
+
+
+def _fmt_date(iso: str) -> str:
+    """Convert an ISO date (YYYY-MM-DD) to DD-MM-YYYY for display."""
+    if not iso or len(iso) < 10:
+        return iso
+    try:
+        y, m, d = iso[:10].split("-")
+        return f"{d}-{m}-{y}"
+    except ValueError:
+        return iso
 _SETTINGS_COL_ORDER = "columns/order"
 _MAX_RECENT = 8
 
@@ -458,8 +469,8 @@ class MainWindow(QMainWindow):
                 it.status,
                 str(it.quantity),
                 it.location,
-                it.purchase_date,
-                it.warranty_end,
+                _fmt_date(it.purchase_date),
+                _fmt_date(it.warranty_end),
                 it.store,
             ]
             for col, value in enumerate(cells):
