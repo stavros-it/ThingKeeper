@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thingkeeper"
+version = "0.1.0"
+description = "Desktop inventory app for gadgets, appliances and hardware parts."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Stavros Antoniou", email = "151866740+stavros-it@users.noreply.github.com" }]
+requires-python = ">=3.10"
+dependencies = [
+    "PyQt6>=6.6",
+    "openpyxl>=3.1",
+    "reportlab>=4.0",
+    "Pillow>=10.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "ruff>=0.4"]
+
+[project.scripts]
+thingkeeper = "thingkeeper.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["thingkeeper*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]

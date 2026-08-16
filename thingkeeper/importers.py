@@ -1,0 +1,235 @@
+"""Importers: Excel (.xlsx), compressed JSON archive (.tkz), CSV."""
+
+from __future__ import annotations
+
+import csv
+import gzip
+import json
+import shutil
+import zipfile
+from pathlib import Path
+
+from . import config
+from .repository import Item, bulk_insert, to_iso
+
+# Column header -> item field mapping for the original "My Equipment.xlsx".
+EXCEL_HEADER_MAP = {
+    "GROUP": "group_name",
+    "TYPE": "type",
+    "BRAND": "brand",
+    "MODEL": "model",
+    "INFO": "info",
+    "PURCHASE": "purchase_date",
+    "SERIAL": "serial",
+    "STORE": "store",
+}
+
+
+class ImportResult:
+    """Outcome of an import operation."""
+
+    def __init__(self, imported: int, skipped: int, errors: list[str] | None = None):
+        self.imported = imported
+        self.skipped = skipped
+        self.errors = errors or []
+
+    def __repr__(self) -> str:
+        return (
+            f"ImportResult(imported={self.imported}, "
+            f"skipped={self.skipped}, errors={len(self.errors)})"
+        )
+
+
+def _clean(value) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def import_excel(path: str | Path) -> ImportResult:
+    """Import items from an .xlsx workbook (original My Equipment layout)."""
+    import openpyxl
+
+    wb = openpyxl.load_workbook(path, data_only=True)
+    ws = wb.active
+    rows = ws.iter_rows(values_only=True)
+    try:
+        header = [str(c).strip().upper() if c is not None else "" for c in next(rows)]
+    except StopIteration:
+        return ImportResult(0, 0, ["Workbook is empty"])
+
+    # Build index of recognised columns.
+    col_map: dict[int, str] = {}
+    for idx, head in enumerate(header):
+        if head in EXCEL_HEADER_MAP:
+            col_map[idx] = EXCEL_HEADER_MAP[head]
+
+    items: list[Item] = []
+    skipped = 0
+    errors: list[str] = []
+    for rno, row in enumerate(rows, start=2):
+        # Skip fully-blank rows.
+        if not any(c is not None and str(c).strip() != "" for c in row):
+            skipped += 1
+            continue
+        record: dict[str, str] = {}
+        for idx, field in col_map.items():
+            if idx < len(row):
+                record[field] = _clean(row[idx])
+        # Skip if no identifying info at all.
+        if not any(record.get(f) for f in ("brand", "model", "serial", "info")):
+            skipped += 1
+            continue
+        try:
+            items.append(
+                Item(
+                    group_name=record.get("group_name", ""),
+                    type=record.get("type", ""),
+                    brand=record.get("brand", ""),
+                    model=record.get("model", ""),
+                    info=record.get("info", ""),
+                    serial=record.get("serial", ""),
+                    store=record.get("store", ""),
+                    purchase_date=to_iso(record.get("purchase_date", "")),
+                    status=config.DEFAULT_STATUS,
+                    quantity=1,
+                )
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            errors.append(f"Row {rno}: {exc}")
+            skipped += 1
+
+    imported = bulk_insert(items)
+    return ImportResult(imported, skipped, errors)
+
+
+def _record_to_item(record: dict) -> Item:
+    return Item(
+        id=None,
+        group_name=str(record.get("group_name", "")),
+        type=str(record.get("type", "")),
+        brand=str(record.get("brand", "")),
+        model=str(record.get("model", "")),
+        info=str(record.get("info", "")),
+        serial=str(record.get("serial", "")),
+        store=str(record.get("store", "")),
+        purchase_date=to_iso(record.get("purchase_date", "")),
+        status=str(record.get("status", config.DEFAULT_STATUS)).upper()
+        or config.DEFAULT_STATUS,
+        quantity=int(record.get("quantity", 1) or 1),
+        location=str(record.get("location", "")),
+        warranty_end=to_iso(record.get("warranty_end", "")),
+        image_path="",  # attachments restored separately
+    )
+
+
+def import_archive(path: str | Path) -> ImportResult:
+    """Import a .tkz (zip + gzip json + attachments) archive.
+
+    Archive layout:
+        items.json.gz      — gzipped JSON list of item dicts
+        attachments/<file> — image files referenced by items.json
+    """
+    path = Path(path)
+    errors: list[str] = []
+    with zipfile.ZipFile(path, "r") as zf:
+        names = zf.namelist()
+        if "items.json.gz" not in names:
+            return ImportResult(0, 0, ["Archive is missing items.json.gz"])
+        # Read + decompress the JSON manifest.
+        with zf.open("items.json.gz") as raw:
+            payload = gzip.decompress(raw.read())
+        try:
+            data = json.loads(payload.decode("utf-8"))
+        except json.JSONDecodeError as exc:
+            return ImportResult(0, 0, [f"Invalid JSON: {exc}"])
+
+        items = []
+        for i, record in enumerate(data, start=1):
+            try:
+                items.append(_record_to_item(record))
+            except Exception as exc:  # pragma: no cover - defensive
+                errors.append(f"Item {i}: {exc}")
+
+        # Restore attachment files.
+        restored = 0
+        for name in names:
+            if name.startswith("attachments/") and not name.endswith("/"):
+                target = config.ATTACHMENTS_DIR / Path(name).name
+                with zf.open(name) as src, open(target, "wb") as dst:
+                    shutil.copyfileobj(src, dst)
+                restored += 1
+        # Re-attach image paths now that files exist.
+        attach_names = {
+            Path(n).name for n in names if n.startswith("attachments/")
+        }
+        for record, item in zip(data, items):
+            img = record.get("image_path") or ""
+            if img:
+                base = Path(img).name
+                if base in attach_names:
+                    item.image_path = str(config.ATTACHMENTS_DIR / base)
+
+        imported = bulk_insert(items)
+        # imported already counts items; attachments restored separately
+        return ImportResult(imported, 0, errors)
+
+
+# CSV column aliases (case-insensitive) -> item field.
+_CSV_ALIASES = {
+    "group": "group_name",
+    "group_name": "group_name",
+    "type": "type",
+    "brand": "brand",
+    "model": "model",
+    "info": "info",
+    "notes": "info",
+    "description": "info",
+    "purchase": "purchase_date",
+    "purchase_date": "purchase_date",
+    "serial": "serial",
+    "serial_number": "serial",
+    "store": "store",
+    "status": "status",
+    "quantity": "quantity",
+    "qty": "quantity",
+    "location": "location",
+    "warranty_end": "warranty_end",
+    "warranty": "warranty_end",
+}
+
+
+def import_csv(path: str | Path) -> ImportResult:
+    """Import items from a CSV file. Header row required."""
+    items: list[Item] = []
+    skipped = 0
+    errors: list[str] = []
+    with open(path, encoding="utf-8-sig", newline="") as fh:
+        reader = csv.reader(fh)
+        try:
+            header = [h.strip().lower() for h in next(reader)]
+        except StopIteration:
+            return ImportResult(0, 0, ["CSV is empty"])
+        col_map: dict[int, str] = {}
+        for idx, head in enumerate(header):
+            if head in _CSV_ALIASES:
+                col_map[idx] = _CSV_ALIASES[head]
+        if not col_map:
+            return ImportResult(0, 0, ["No recognised columns in CSV header"])
+
+        for rno, row in enumerate(reader, start=2):
+            if not any(c.strip() for c in row):
+                skipped += 1
+                continue
+            record: dict[str, str] = {}
+            for idx, field in col_map.items():
+                if idx < len(row):
+                    record[field] = row[idx].strip()
+            try:
+                items.append(_record_to_item(record))
+            except Exception as exc:  # pragma: no cover - defensive
+                errors.append(f"Row {rno}: {exc}")
+                skipped += 1
+
+    imported = bulk_insert(items)
+    return ImportResult(imported, skipped, errors)
