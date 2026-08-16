@@ -39,7 +39,7 @@ def run() -> int:
         app.setWindowIcon(QIcon(str(_ICON_PATH)))
     apply_theme(app)
     window = MainWindow()
-    window.show()
+    window.showMaximized()
     return app.exec()
 
 
