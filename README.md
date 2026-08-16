@@ -99,3 +99,9 @@ ThingKeeper/
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Project docs
+
+- [ROADMAP.md](ROADMAP.md) — what's shipped, what's planned, what's dropped.
+- [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) — architecture, data model and
+  design decisions for contributors.
