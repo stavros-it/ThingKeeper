@@ -104,7 +104,6 @@ _SETTINGS_FILTERS = "filters/saved"
 _SETTINGS_RECENT_IMP = "recent/imports"
 _SETTINGS_RECENT_EXP = "recent/exports"
 _SETTINGS_COL_VIS = "columns/visible"
-_SETTINGS_COL_WIDTHS = "columns/widths"
 _SETTINGS_SORT = "table/sort"
 
 
@@ -265,12 +264,10 @@ class MainWindow(QMainWindow):
         header = self.table.horizontalHeader()
         header.setSectionsMovable(True)
         header.setStretchLastSection(False)
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.setMinimumSectionSize(60)
         header.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         header.customContextMenuRequested.connect(self._show_column_menu)
-        for i, (_, w) in enumerate(COLUMNS):
-            header.resizeSection(i, w)
-        header.sectionResized.connect(self._on_section_resized)
         header.sectionMoved.connect(self._on_section_moved)
         header.sortIndicatorChanged.connect(self._on_sort_changed)
         self.table.doubleClicked.connect(self.edit_selected)
@@ -528,6 +525,7 @@ class MainWindow(QMainWindow):
                 item = QTableWidgetItem(value)
                 if col in (0, 7):
                     item.setData(Qt.ItemDataRole.DisplayRole, value)
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     try:
                         item.setData(Qt.ItemDataRole.UserRole, int(value))
                     except (ValueError, TypeError):
@@ -781,14 +779,7 @@ class MainWindow(QMainWindow):
     def _reset_columns(self) -> None:
         for i in range(len(COLUMNS)):
             self.table.setColumnHidden(i, False)
-        header = self.table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        for i, (_, w) in enumerate(COLUMNS):
-            header.resizeSection(i, w)
         self.table.sortByColumn(-1, Qt.SortOrder.AscendingOrder)
-        self._save_column_state()
-
-    def _on_section_resized(self, logical: int, old: int, new: int) -> None:
         self._save_column_state()
 
     def _on_section_moved(self, logical: int, old_visual: int, new_visual: int) -> None:
@@ -801,10 +792,8 @@ class MainWindow(QMainWindow):
         header = self.table.horizontalHeader()
         visible = [not self.table.isColumnHidden(i) for i in range(len(COLUMNS))]
         order = [header.visualIndex(i) for i in range(len(COLUMNS))]
-        widths = [header.sectionSize(i) for i in range(len(COLUMNS))]
         self._settings.setValue(_SETTINGS_COL_VIS, json.dumps(visible))
         self._settings.setValue(_SETTINGS_COL_ORDER, json.dumps(order))
-        self._settings.setValue(_SETTINGS_COL_WIDTHS, json.dumps(widths))
         sort_col = int(header.sortIndicatorSection())
         sort_ord = int(header.sortIndicatorOrder().value)
         self._settings.setValue(_SETTINGS_SORT, json.dumps([sort_col, sort_ord]))
@@ -827,16 +816,6 @@ class MainWindow(QMainWindow):
                 for logical, visual in enumerate(order):
                     if logical < len(COLUMNS):
                         header.moveSection(header.visualIndex(logical), visual)
-            except (json.JSONDecodeError, TypeError):
-                pass
-        widths_raw = self._settings.value(_SETTINGS_COL_WIDTHS)
-        if widths_raw:
-            try:
-                widths = json.loads(widths_raw)
-                header = self.table.horizontalHeader()
-                for i, w in enumerate(widths):
-                    if i < len(COLUMNS) and w > 0:
-                        header.resizeSection(i, w)
             except (json.JSONDecodeError, TypeError):
                 pass
         sort_raw = self._settings.value(_SETTINGS_SORT)
