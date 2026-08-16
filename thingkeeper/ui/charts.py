@@ -21,14 +21,35 @@ _PALETTE = [
 ]
 
 
+def _wrap_label(text: str, max_chars: int = 10) -> str:
+    """Wrap a long label onto multiple lines so it fits in a narrow column."""
+    words = text.split()
+    if len(words) == 1:
+        if len(text) <= max_chars:
+            return text
+        chunks = [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
+        return "\n".join(chunks)
+    lines: list[str] = []
+    cur = ""
+    for w in words:
+        if cur and len(cur) + 1 + len(w) > max_chars:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = f"{cur} {w}".strip()
+    if cur:
+        lines.append(cur)
+    return "\n".join(lines)
+
+
 class BarChartWidget(pg.PlotWidget):
-    """Horizontal bar chart for counts or values by category."""
+    """Vertical bar chart for counts or values by category."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setMouseEnabled(False, False)
         self.hideButtons()
-        self.showGrid(x=True, y=False, alpha=0.25)
+        self.showGrid(x=False, y=True, alpha=0.25)
 
     def set_data(self, title: str, labels: list[str], values: list[float]) -> None:
         self.clear()
@@ -36,21 +57,19 @@ class BarChartWidget(pg.PlotWidget):
             self.setTitle(f"{title} - no data")
             return
         self.setTitle(title)
-        n = len(values)
         bg = pg.BarGraphItem(
-            x=[0.0] * n,
-            y=list(range(n)),
-            height=0.6,
-            width=values,
+            x=list(range(len(values))),
+            height=values,
+            width=0.6,
             brush=QColor(ACCENT),
         )
         self.addItem(bg)
-        self.invertY(True)
-        ax = self.getAxis("left")
-        ax.setTicks([[(i, lbl) for i, lbl in enumerate(labels)]])
+        ax = self.getAxis("bottom")
+        wrapped = [(i, _wrap_label(lbl)) for i, lbl in enumerate(labels)]
+        ax.setTicks([wrapped])
         ax.setTickFont(QFont("Segoe UI", 9))
-        self.getAxis("bottom").setLabel("Count")
-        self.setLimits(yMin=-1, yMax=n)
+        ax.setStyle(hideOverlappingLabels=False)
+        self.getAxis("left").setLabel("Count")
 
 
 class PieChartWidget(QWidget):
