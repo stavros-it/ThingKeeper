@@ -104,25 +104,34 @@ maintainable desktop app.
 
 ---
 
-## v1.0 — Hardening (Later)
+## v1.0 — Hardening (Done)
 
 **Goal:** first version that can be recommended to other people.
 
-- **Cross-platform testing** — Windows, macOS, Linux
-- **Installer packages** — MSIX / Inno Setup on Windows, `.dmg` on macOS
+- **Cross-platform testing** — CI runs on Windows + Ubuntu; PyQt6 system deps
+  installed on Linux
+- ~~**Installer packages** — MSIX / Inno Setup on Windows, `.dmg` on macOS~~ (Deferred — see Long-term)
 - ~~**Settings dialog** — data dir, backup folder, warranty soon-days, theme~~ (Done in v0.5; backup folder + retention + auto-backup interval)
-- **Dark mode** — follow system palette
-- **Internationalisation** — extract strings, add Greek / English locales
-- **Accessibility pass** — keyboard-only navigation, screen reader labels
-- **In-app help** — first-launch tour, keyboard shortcut cheatsheet
-- **Crash reporting** — local-only log file the user can share on issue
-- **Test suite** — `tests/` with pytest, mocked DB for unit tests
-- **CI** — GitHub Actions running ruff + pytest on every push
+- **Dark mode** — `View → Theme` with Follow system / Light / Dark; `theme.py`
+  module with QSS stylesheet
+- ~~**Internationalisation** — extract strings, add Greek / English locales~~ (Deferred — see Long-term)
+- **Accessibility pass** — status tips on all toolbar actions; accessible names
+  and descriptions on search box + items table; keyboard shortcuts throughout
+- ~~**In-app help** — first-launch tour, keyboard shortcut cheatsheet~~ (Deferred — see Long-term)
+- ~~**Crash reporting** — local-only log file the user can share on issue~~ (Deferred — see Long-term)
+- **Test suite** — `tests/` with pytest + pytest-qt; 119 tests covering database,
+  repository, importers, exporters, backup, integrity, commands, CLI, UI, theme
+- **CI** — GitHub Actions (`.github/workflows/ci.yml`) running ruff + pytest on
+  Ubuntu + Windows, Python 3.10 + 3.12
 
 ---
 
 ## Long-term ideas (Later)
 
+- **Installer packages** — MSIX / Inno Setup on Windows, `.dmg` on macOS
+- **Internationalisation** — extract strings, add Greek / English locales
+- **In-app help** — first-launch tour, keyboard shortcut cheatsheet
+- **Crash reporting** — local-only log file the user can share on issue
 - **Camera barcode scan** — use `python-opencv` or `zbar` for live camera decode
 - **QR code labels** — generate printable QR labels per item/location
 - **Multi-user sync** — optional sync to a remote folder (WebDAV / S3)

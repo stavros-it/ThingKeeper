@@ -41,6 +41,11 @@ single-file storage.
   attachments, missing image files, and stale database rows; one-click cleanup.
 - **Settings dialog** — `Tools → Settings` for backup folder, retention count,
   and auto-backup interval.
+- **Dark mode** — `View → Theme` with Follow system / Light / Dark.
+- **Test suite** — 119 pytest tests covering database, repository, importers,
+  exporters, backup, integrity, commands, CLI, UI, and theme.
+- **CI** — GitHub Actions runs ruff + pytest on every push (Ubuntu + Windows,
+  Python 3.10 + 3.12).
 - **Import** — Excel (`.xlsx`), compressed JSON archive (`.tkz`), CSV (`.csv`).
 - **Export** — `.tkz` (with attachments), CSV, Excel, PDF report.
 - **Recent files** — recently imported/exported files listed in the File menu.
@@ -132,6 +137,7 @@ ThingKeeper/
 │       ├── trash_dialog.py      # view / restore / purge deleted items
 │       ├── integrity_dialog.py  # data integrity check + cleanup UI
 │       ├── settings_dialog.py   # backup folder, retention, auto-backup interval
+│       ├── theme.py             # light/dark palettes + QSS stylesheet
 │       └── reports_dialog.py    # PDF report
 └── data/                   # runtime data (git-ignored)
     ├── thingkeeper.db

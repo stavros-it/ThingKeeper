@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thingkeeper"
-version = "0.1.0"
+version = "1.0.0"
 description = "Desktop inventory app for gadgets, appliances and hardware parts."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -15,17 +15,24 @@ dependencies = [
     "openpyxl>=3.1",
     "reportlab>=4.0",
     "Pillow>=10.0",
+    "pyqtgraph>=0.13",
+    "cryptography>=42.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "ruff>=0.4"]
+dev = ["pytest>=7.0", "pytest-qt>=4.0", "ruff>=0.4"]
 
 [project.scripts]
-thingkeeper = "thingkeeper.__main__:main"
+thingkeeper = "thingkeeper.__main__:run"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["thingkeeper*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+qt_api = "pyqt6"
+filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.ruff]
 line-length = 100

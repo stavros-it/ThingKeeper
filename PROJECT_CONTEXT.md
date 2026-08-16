@@ -247,8 +247,28 @@ ThingKeeper/
         ├── trash_dialog.py      # view / restore / purge soft-deleted items
         ├── integrity_dialog.py  # data integrity check + cleanup UI
         ├── settings_dialog.py   # backup folder, retention, auto-backup interval
+        ├── theme.py             # light/dark palettes + QSS stylesheet
         └── reports_dialog.py    # PDF report dialog
 ```
+
+### Tests (`tests/`)
+
+```
+tests/
+    ├── conftest.py            # fixtures: isolated data dir, offscreen Qt, fake QMessageBox
+    ├── test_database.py       # schema, migrations, WAL, transaction
+    ├── test_repository.py     # Item/Contact/Loan CRUD, aggregations, depreciation
+    ├── test_importers.py      # Excel, CSV, archive, encrypted archive round-trips
+    ├── test_exporters.py     # CSV, Excel, HTML, PDF, archive, encrypted
+    ├── test_backup.py         # snapshots, rotation, auto-backup, BackupScheduler
+    ├── test_integrity.py     # orphan detection, cleanup, stale image rows
+    ├── test_commands.py       # undo/redo command pattern + UndoStack
+    ├── test_cli.py            # `python -m thingkeeper --report PATH`
+    ├── test_ui.py             # MainWindow + all dialogs (offscreen)
+    └── test_theme.py          # palettes, theme switching, View → Theme menu
+```
+
+Run with `python -m pytest tests/ -q`.
 
 ### Runtime data (git-ignored)
 

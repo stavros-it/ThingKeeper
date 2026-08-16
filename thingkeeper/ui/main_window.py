@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings, Qt, QTimer
-from PyQt6.QtGui import QAction, QColor, QKeySequence
+from PyQt6.QtGui import QAction, QActionGroup, QColor, QKeySequence
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -144,6 +144,8 @@ class MainWindow(QMainWindow):
         self.search_edit.setPlaceholderText(
             "Search group, type, brand, model, serial, location…"
         )
+        self.search_edit.setStatusTip("Filter items by text (Ctrl+F to focus)")
+        self.search_edit.setAccessibleName("Search box")
         self.search_edit.textChanged.connect(self._on_search_changed)
         self.search_edit.setClearButtonEnabled(True)
 
@@ -188,6 +190,10 @@ class MainWindow(QMainWindow):
         # Table.
         self.table = QTableWidget(0, len(COLUMNS))
         self.table.setHorizontalHeaderLabels([c[0] for c in COLUMNS])
+        self.table.setAccessibleName("Items table")
+        self.table.setAccessibleDescription(
+            "Inventory items. Double-click a row to edit it."
+        )
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -222,61 +228,72 @@ class MainWindow(QMainWindow):
 
         self.act_new = QAction("New", self)
         self.act_new.setShortcut("Ctrl+N")
+        self.act_new.setStatusTip("Create a new item")
         self.act_new.triggered.connect(self.new_item)
         tb.addAction(self.act_new)
 
         self.act_edit = QAction("Edit", self)
         self.act_edit.setShortcut("Ctrl+E")
+        self.act_edit.setStatusTip("Edit the selected item")
         self.act_edit.triggered.connect(self.edit_selected)
         tb.addAction(self.act_edit)
 
         self.act_duplicate = QAction("Duplicate", self)
         self.act_duplicate.setShortcut("Ctrl+D")
+        self.act_duplicate.setStatusTip("Duplicate the selected item")
         self.act_duplicate.triggered.connect(self.duplicate_selected)
         tb.addAction(self.act_duplicate)
 
         self.act_delete = QAction("Delete", self)
         self.act_delete.setShortcut("Delete")
+        self.act_delete.setStatusTip("Move the selected item to trash")
         self.act_delete.triggered.connect(self.delete_selected)
         tb.addAction(self.act_delete)
 
         tb.addSeparator()
         self.act_undo = QAction("Undo", self)
         self.act_undo.setShortcut("Ctrl+Z")
+        self.act_undo.setStatusTip("Undo the last action")
         self.act_undo.triggered.connect(self.undo_stack.undo)
         tb.addAction(self.act_undo)
 
         self.act_redo = QAction("Redo", self)
         self.act_redo.setShortcut("Ctrl+Y")
+        self.act_redo.setStatusTip("Redo the last undone action")
         self.act_redo.triggered.connect(self.undo_stack.redo)
         tb.addAction(self.act_redo)
 
         tb.addSeparator()
         self.act_bulk_edit = QAction("Bulk edit", self)
         self.act_bulk_edit.setShortcut("Ctrl+B")
+        self.act_bulk_edit.setStatusTip("Edit multiple selected items at once")
         self.act_bulk_edit.triggered.connect(self.bulk_edit)
         tb.addAction(self.act_bulk_edit)
 
         self.act_scan = QAction("Scan", self)
         self.act_scan.setShortcut("Ctrl+K")
+        self.act_scan.setStatusTip("Look up an item by scanning its barcode")
         self.act_scan.triggered.connect(self.scan_serial)
         tb.addAction(self.act_scan)
 
         self.act_trash = QAction("Trash", self)
+        self.act_trash.setStatusTip("View, restore, or purge deleted items")
         self.act_trash.triggered.connect(self.show_trash)
         tb.addAction(self.act_trash)
 
         self.act_loan = QAction("Loan", self)
         self.act_loan.setShortcut("Ctrl+L")
+        self.act_loan.setStatusTip("Loan the selected item to a contact")
         self.act_loan.triggered.connect(self.loan_selected)
         tb.addAction(self.act_loan)
 
         self.act_loans = QAction("Loans", self)
+        self.act_loans.setStatusTip("Browse all loans and return items")
         self.act_loans.triggered.connect(self.show_loans)
         tb.addAction(self.act_loans)
 
         self.act_contacts = QAction("Contacts", self)
-        self.act_contacts.triggered.connect(self.show_contacts)
+        self.act_contacts.setStatusTip("Manage contacts for loans")
         tb.addAction(self.act_contacts)
 
         self.act_report = QAction("Report", self)
@@ -344,6 +361,20 @@ class MainWindow(QMainWindow):
         self._add_action(view_menu, "&Trash…", self.show_trash)
         view_menu.addSeparator()
         self._add_action(view_menu, "&Columns…", self._show_column_menu_at_zero)
+        view_menu.addSeparator()
+        theme_menu = view_menu.addMenu("&Theme")
+        self._theme_group = QActionGroup(self)
+        self._theme_group.setExclusive(True)
+        for label, mode in [
+            ("Follow &system", "system"),
+            ("&Light", "light"),
+            ("&Dark", "dark"),
+        ]:
+            act = QAction(label, self, checkable=True)
+            act.triggered.connect(lambda _checked, m=mode: self._set_theme(m))
+            self._theme_group.addAction(act)
+            theme_menu.addAction(act)
+        self._refresh_theme_actions()
         loans_menu = mb.addMenu("&Loans")
 
         self._add_action(loans_menu, "&Loan selected item…", self.loan_selected, "Ctrl+L")
@@ -1056,6 +1087,25 @@ class MainWindow(QMainWindow):
 
     def _on_auto_backup_failed(self, msg: str) -> None:
         self.statusBar().showMessage(f"Auto-backup failed: {msg}", 8000)
+
+    # --------------------------------------------------------------- theme
+    def _refresh_theme_actions(self) -> None:
+        from .theme import get_theme_mode
+        current = get_theme_mode().value
+        for act in self._theme_group.actions():
+            mode = act.text().replace("&", "").lower()
+            if mode == "follow system":
+                mode = "system"
+            act.setChecked(mode == current)
+
+    def _set_theme(self, mode: str) -> None:
+        from .theme import ThemeMode, refresh_theme, set_theme_mode
+        try:
+            tm = ThemeMode(mode)
+        except ValueError:
+            return
+        set_theme_mode(tm)
+        refresh_theme()
 
     def keyPressEvent(self, event) -> None:  # noqa: N802 - Qt override
         if event.matches(QKeySequence.StandardKey.Find):

@@ -22,11 +22,9 @@ When making any change to the codebase — bug fix, feature, refactor, docs —
 3. **Run quality checks** before committing:
    ```powershell
    ruff check .
+   python -m pytest tests/ -q
    ```
-   Must pass. Fix any issues before proceeding.
-
-   (A `tests/` suite is planned for v1.0 — once added, `python -m pytest tests/ -q`
-   becomes a required check too.)
+   Both must pass. Fix any issues before proceeding.
 
 4. **Commit and push** to the GitHub repo:
    ```powershell
@@ -37,9 +35,10 @@ When making any change to the codebase — bug fix, feature, refactor, docs —
    The remote is `https://github.com/stavros-it/ThingKeeper.git` (already
    configured as `origin` on the `main` branch).
 
-5. **Check the latest CI run** after pushing (once CI is configured):
-   CI is not yet set up for ThingKeeper. Once a `.github/workflows/ci.yml`
-   is added (planned in ROADMAP v1.0), verify the latest run is green:
+5. **Check the latest CI run** after pushing:
+   CI is configured in `.github/workflows/ci.yml` — it runs `ruff check .` and
+   `python -m pytest tests/ -q` on Ubuntu + Windows, Python 3.10 + 3.12.
+   Verify the latest run is green:
    ```powershell
    curl -s https://api.github.com/repos/stavros-it/ThingKeeper/commits/$(git rev-parse HEAD)/check-runs | python -m json.tool
    ```
@@ -97,6 +96,6 @@ first and `git rm --cached` the file.
 - **Remote**: `origin` → `https://github.com/stavros-it/ThingKeeper.git`
 - **Default branch**: `main`
 - **License**: Proprietary (© 2026 Stavros Antoniou, all rights reserved)
-- **CI**: Not yet configured (planned in ROADMAP v1.0)
+- **CI**: GitHub Actions — `ruff check .` + `python -m pytest tests/ -q` on Ubuntu + Windows, Python 3.10 + 3.12 (`.github/workflows/ci.yml`)
 - **Entry points**: `main.py` (console), `launch.pyw` (no console on Windows),
   `python -m thingkeeper`
