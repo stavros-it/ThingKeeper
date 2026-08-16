@@ -24,7 +24,10 @@ single-file storage.
 - **Rich item model** — group, type, brand, model, serial, store, purchase date,
   status, quantity, location, warranty end date and free-form notes.
 - **Status tracking** — `AVAILABLE`, `IN USE`, `LOANED`, `BROKEN`, `SOLD`.
-- **Warranty & expiry** — items with an upcoming or expired warranty are flagged.
+- **Warranty & expiry** — items with an upcoming or expired warranty are flagged
+  with colour-coded cells and tooltips ("Expired N days ago", "N days left",
+  "Ny Ym left"). Warranty end auto-fills to 2 years after the purchase date
+  when adding an item, and can be overridden for shorter/longer periods.
 - **Multi-image attachments** — attach multiple photos/receipts per item;
   drag-and-drop directly onto the item dialog.
 - **Bulk edit** — change a field (status, location, group…) across many items at once.
@@ -33,6 +36,7 @@ single-file storage.
 - **Search & filter** — instant text search plus filters by group, type, brand and status.
 - **Saved filter presets** — name and recall filter combinations.
 - **Column show/hide & reorder** — right-click the table header, drag columns to reorder.
+  Column widths, sort order, and visibility persist across launches.
 - **Serial / barcode scan** — keyboard-wedge USB scanner support.
 - **Loan tracking** — loan items to contacts, set due dates, one-click return;
   overdue loans are highlighted in the main table.

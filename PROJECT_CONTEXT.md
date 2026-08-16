@@ -336,13 +336,54 @@ a `QLineEdit` focused and reacts to `returnPressed`. This keeps dependencies
 at zero and supports every scanner on the market. Camera scanning is a
 long-term idea in the roadmap.
 
-### 6.6 Warranty highlighting is computed at view time
+### 6.6 Warranty status is computed at view time, per item
 
-The main window queries `warranty_expired()` and `warranty_expiring()` on
-each refresh and colour-codes rows. This is fast for thousands of items and
-avoids storing a derived status that could drift.
+The main window computes warranty status inline for each item via
+`_warranty_status()` in `main_window.py` during `_populate_table()`.
+No separate `warranty_expired()` / `warranty_expiring()` queries are
+issued on refresh — the status is derived from the item's
+`warranty_end` ISO date and the current date. The result drives the
+cell's foreground colour, background colour, font weight/italic, and
+tooltip:
 
-### 6.7 No background threads
+| State                         | Foreground | Background | Style      | Tooltip                        |
+|-------------------------------|------------|------------|------------|--------------------------------|
+| No warranty                   | dim        | —          | italic     | "No warranty"                  |
+| Expired                       | red        | red bg     | bold       | "Expired N days/months/years ago" |
+| Expires today                 | yellow     | yellow bg  | bold       | "Expires today"                |
+| Expiring soon (≤30 days)      | yellow     | yellow bg  | normal     | "N days left"                  |
+| Still valid                   | green      | —          | normal     | "Ny Ym left" / "Nm left"       |
+
+Malformed dates fall back to plain text without crashing. Colours come
+from `theme.py` (`SUCCESS`, `WARNING`, `DANGER`, `TEXT_DIM`, and their
+`*_BG` counterparts) — never inlined.
+
+### 6.7 Warranty auto-fill in the item dialog
+
+When the purchase date changes in `ItemDialog`, the warranty end date
+auto-fills to two years later (and checks "Has warranty") — but only if
+the warranty is not yet enabled, or the warranty date still equals the
+previous purchase date (i.e. the user hasn't customised it yet). A
+manually-set warranty date is always preserved.
+
+### 6.8 Dates are displayed as DD-MM-YYYY, stored as ISO
+
+SQLite stores dates as ISO `YYYY-MM-DD` text (sortable, portable). The
+items table renders them as `DD-MM-YYYY` via the `_fmt_date()` helper
+in `main_window.py`. The item dialog still uses `QDateEdit` with
+`yyyy-MM-dd` display format; only the table view is reformatted.
+
+### 6.9 Table layout persists across launches
+
+Column visibility, order, widths, and the sort indicator (column +
+direction) are persisted in `QSettings` and restored on startup. The
+column widths are auto-fit to content once on the first populate after
+launch (via `resizeColumnsToContents()`), then saved; on subsequent
+launches the saved widths are restored and the auto-fit step is
+skipped. "Reset to defaults" in the header context menu re-enables
+auto-fit on the next refresh.
+
+### 6.10 No background threads
 
 Every operation (search, filter, import, export, PDF) runs on the UI thread.
 For the expected dataset size (low thousands of items) this is snappy enough
@@ -447,6 +488,8 @@ This is the pattern used by the smoke tests run during the initial build.
 | Add a new integrity check               | `integrity.py` + `integrity_dialog.py` |
 | Add a keyboard shortcut                 | the relevant `QAction.setShortcut()` in `main_window.py` |
 | Add a new report                        | `exporters.export_pdf_report()` or a sibling function + `reports_dialog.py` |
+| Change warranty display logic           | `_warranty_status()` + `_fmt_date()` in `main_window.py` |
+| Change table column persistence        | `_save_column_state()` + `_restore_column_state()` in `main_window.py` |
 
 ---
 

@@ -120,10 +120,45 @@ maintainable desktop app.
   and descriptions on search box + items table; keyboard shortcuts throughout
 - ~~**In-app help** — first-launch tour, keyboard shortcut cheatsheet~~ (Deferred — see Long-term)
 - ~~**Crash reporting** — local-only log file the user can share on issue~~ (Deferred — see Long-term)
-- **Test suite** — `tests/` with pytest + pytest-qt; 119 tests covering database,
+- **Test suite** — `tests/` with pytest + pytest-qt; 120 tests covering database,
   repository, importers, exporters, backup, integrity, commands, CLI, UI, theme
 - **CI** — GitHub Actions (`.github/workflows/ci.yml`) running ruff + pytest on
   Ubuntu + Windows, Python 3.10 + 3.12
+
+---
+
+## v1.1 — UI polish (Done)
+
+**Goal:** refine the day-to-day UX based on real usage of v1.0.
+
+- **Fix: wrong item opened when table is sorted** — `_selected_items()` now
+  reads the item ID from column 0's `UserRole` data and fetches by ID,
+  instead of indexing `self._items` by visual row (which broke once the
+  user clicked a column header to sort).
+- **Date display** — Purchase and Warranty columns render as `DD-MM-YYYY`
+  in the items table (stored as ISO `YYYY-MM-DD` in SQLite).
+- **Auto-calculate warranty date** — changing the purchase date in the
+  item dialog auto-fills the warranty end date to two years later
+  (and enables "Has warranty") unless the user has already set a
+  custom warranty date.
+- **Smart warranty status indication** — the Warranty column now shows
+  status at a glance via colour, weight, and a tooltip: no warranty
+  (dim italic), expired (red bold on red bg, "Expired N… ago"), expires
+  today (yellow bold), expiring soon ≤30 days (yellow, "N days left"),
+  still valid (green, "Ny Ym left"). Computed inline per item; no extra
+  DB queries on refresh.
+- **Persistent table layout** — column widths, sort indicator
+  (column + direction), visibility, and order persist across launches
+  via `QSettings`. Auto-fit to content runs once on first launch, then
+  widths are saved and restored.
+- **All columns resizable** — every column (including Model) is in
+  `Interactive` resize mode; the Model column is no longer locked to
+  `Stretch`.
+- **Centered numeric columns** — ID and Qty cells are centre-aligned.
+- **Brighter scrollbar handles** — `#5a5a5a` default / `#707070` hover
+  (was `#2a2a2a` / `#333333`, nearly invisible on the dark background).
+- **README badges** — shields.io badges for CI, Python version, PyQt6,
+  platform, test count, and license.
 
 ---
 
