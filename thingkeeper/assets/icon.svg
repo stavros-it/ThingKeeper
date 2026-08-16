@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background: rounded square with blue gradient -->
+  <rect width="512" height="512" rx="102" fill="url(#bg)"/>
+
+  <!-- Box outline (the "thing" / container) -->
+  <rect x="110" y="128" width="292" height="272" rx="24"
+        fill="none" stroke="#ffffff" stroke-width="14"/>
+
+  <!-- Parcel seal line across top third -->
+  <line x1="110" y1="208" x2="402" y2="208"
+        stroke="#ffffff" stroke-width="10" stroke-opacity="0.55"/>
+
+  <!-- Checkmark (the "keeper" / verified) -->
+  <path d="M 208 290 L 244 326 L 312 248"
+        fill="none" stroke="#ffffff" stroke-width="16"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

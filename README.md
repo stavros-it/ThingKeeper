@@ -1,5 +1,9 @@
 # ThingKeeper
 
+<p align="center">
+  <img src="thingkeeper/assets/icon-256.png" alt="ThingKeeper icon" width="128" height="128">
+</p>
+
 A desktop inventory application for keeping track of gadgets, appliances, hardware
 parts and anything else you own. Built with PyQt6 and SQLite — fast, offline, and
 single-file storage.
@@ -75,6 +79,11 @@ On Windows you can also double-click **`launch.pyw`** (or pin it to the
 taskbar) — it uses `pythonw.exe`, so the app starts with no console window
 in the background.
 
+To create a **desktop shortcut** with the ThingKeeper icon, double-click
+**`create_desktop_shortcut.bat`** (or run it from a terminal). It places a
+`ThingKeeper.lnk` on the current user's desktop, pointing at `launch.pyw`
+with `thingkeeper/assets/app.ico` as the icon.
+
 On first launch ThingKeeper creates a SQLite database at `data/thingkeeper.db` and an
 `data/attachments/` folder for images — both are git-ignored so your inventory stays
 local and private.
@@ -109,6 +118,7 @@ new fields default to sensible values (status `AVAILABLE`, quantity `1`).
 ThingKeeper/
 ├── main.py                 # entry point (console)
 ├── launch.pyw              # entry point (no console window on Windows, double-click)
+├── create_desktop_shortcut.bat  # installs a desktop shortcut with the app icon
 ├── pyproject.toml          # packaging + ruff + pytest config
 ├── .github/workflows/
 │   └── ci.yml              # ruff + pytest on Ubuntu + Windows
@@ -125,6 +135,10 @@ ThingKeeper/
     ├── backup.py               # timestamped backups + rotation + BackupScheduler
     ├── integrity.py            # data integrity check + orphan attachment cleanup
     ├── scanner.py              # serial-scan helper
+    ├── assets/
+    │   ├── app.ico             # Windows icon (multi-size)
+    │   ├── icon.png            # 512x512 PNG icon
+    │   └── icon-256.png        # 256x256 PNG (for README/docs)
     └── ui/
         ├── __init__.py
         ├── main_window.py           # table, filters, toolbar, undo/redo, saved filters

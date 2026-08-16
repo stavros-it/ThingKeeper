@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings, Qt, QTimer
-from PyQt6.QtGui import QAction, QColor, QKeySequence
+from PyQt6.QtGui import QAction, QColor, QIcon, QKeySequence
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -110,6 +110,9 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"{config.APP_NAME} {config.APP_VERSION}")
+        icon_path = Path(__file__).resolve().parent.parent / "assets" / "app.ico"
+        if icon_path.is_file():
+            self.setWindowIcon(QIcon(str(icon_path)))
         self.resize(1280, 760)
         self._items: list[Item] = []
         self._settings = QSettings("ThingKeeper", "ThingKeeper")

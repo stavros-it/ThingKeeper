@@ -210,6 +210,7 @@ contacts, categories) is planned in v0.3 — see [ROADMAP.md](ROADMAP.md).
 ThingKeeper/
 ├── main.py                      # console entry point
 ├── launch.pyw                   # no-console entry point (Windows, double-click)
+├── create_desktop_shortcut.bat  # installs a desktop shortcut with the app icon
 ├── pyproject.toml               # packaging + ruff + pytest config
 ├── requirements.txt             # pinned runtime deps
 ├── README.md                    # user-facing docs
@@ -235,6 +236,10 @@ ThingKeeper/
     ├── backup.py                # timestamped backups + rotation + BackupScheduler
     ├── integrity.py             # data integrity check + orphan attachment cleanup
     ├── scanner.py              # serial lookup helper
+    ├── assets/
+    │   ├── app.ico             # Windows icon (multi-size, used for shortcuts)
+    │   ├── icon.png            # 512x512 PNG
+    │   └── icon-256.png        # 256x256 PNG (README/docs)
     └── ui/
         ├── __init__.py
         ├── main_window.py       # table, filters, menus, toolbar, undo/redo, loans, contacts, dashboard, tools
