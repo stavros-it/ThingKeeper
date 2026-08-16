@@ -4,6 +4,15 @@
   <img src="thingkeeper/assets/icon-256.png" alt="ThingKeeper icon" width="128" height="128">
 </p>
 
+<p align="center">
+  <a href="https://github.com/stavros-it/ThingKeeper/actions/workflows/ci.yml"><img src="https://github.com/stavros-it/ThingKeeper/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/PyQt6-6.6+-41CD52?logo=qt&logoColor=white" alt="PyQt6 6.6+">
+  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey" alt="Platform: Windows | Linux">
+  <img src="https://img.shields.io/badge/Tests-120-brightgreen" alt="Tests: 120">
+  <img src="https://img.shields.io/badge/License-Proprietary-red" alt="License: Proprietary">
+</p>
+
 A desktop inventory application for keeping track of gadgets, appliances, hardware
 parts and anything else you own. Built with PyQt6 and SQLite — fast, offline, and
 single-file storage.
@@ -47,7 +56,7 @@ single-file storage.
   and auto-backup interval.
 - **Dark theme** — polished dark UI with Fusion style, semantic colors, and
   accent highlights; applied unconditionally at startup via `theme.py`.
-- **Test suite** — 119 pytest tests covering database, repository, importers,
+- **Test suite** — 120 pytest tests covering database, repository, importers,
   exporters, backup, integrity, commands, CLI, UI, and theme.
 - **CI** — GitHub Actions runs ruff + pytest on every push (Ubuntu + Windows,
   Python 3.10 + 3.12).
