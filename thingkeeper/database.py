@@ -72,7 +72,6 @@ CREATE INDEX IF NOT EXISTS idx_items_type    ON items(type);
 CREATE INDEX IF NOT EXISTS idx_items_brand   ON items(brand);
 CREATE INDEX IF NOT EXISTS idx_items_status  ON items(status);
 CREATE INDEX IF NOT EXISTS idx_items_serial  ON items(serial);
-CREATE INDEX IF NOT EXISTS idx_items_deleted ON items(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_images_item   ON item_images(item_id);
 CREATE INDEX IF NOT EXISTS idx_loans_item    ON loans(item_id);
 CREATE INDEX IF NOT EXISTS idx_loans_contact ON loans(contact_id);
