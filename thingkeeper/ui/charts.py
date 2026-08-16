@@ -43,13 +43,20 @@ def _wrap_label(text: str, max_chars: int = 10) -> str:
 
 
 class BarChartWidget(pg.PlotWidget):
-    """Vertical bar chart for counts or values by category."""
+    """Vertical bar chart for counts or values by category.
+
+    Category labels are rendered as TextItem annotations inside the plot
+    scene (below the x-axis line) rather than as axis tick text. This
+    avoids pyqtgraph's axis bounding-rect clipping, which was cutting off
+    multi-line labels.
+    """
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setMouseEnabled(False, False)
         self.hideButtons()
         self.showGrid(x=False, y=True, alpha=0.25)
+        self.plotItem = self.getPlotItem()
 
     def set_data(self, title: str, labels: list[str], values: list[float]) -> None:
         self.clear()
@@ -57,6 +64,11 @@ class BarChartWidget(pg.PlotWidget):
             self.setTitle(f"{title} - no data")
             return
         self.setTitle(title)
+
+        max_val = max(values) if values else 1.0
+        if max_val <= 0:
+            max_val = 1.0
+
         bg = pg.BarGraphItem(
             x=list(range(len(values))),
             height=values,
@@ -64,12 +76,27 @@ class BarChartWidget(pg.PlotWidget):
             brush=QColor(ACCENT),
         )
         self.addItem(bg)
+
+        # Disable bottom-axis tick text; labels are drawn as TextItems instead.
         ax = self.getAxis("bottom")
-        wrapped = [(i, _wrap_label(lbl)) for i, lbl in enumerate(labels)]
-        ax.setTicks([wrapped])
-        ax.setTickFont(QFont("Segoe UI", 7))
-        ax.setStyle(hideOverlappingLabels=False, tickTextHeight=40, autoExpandTextSpace=True)
+        ax.setTicks([[(i, "") for i in range(len(labels))]])
+        ax.setStyle(showValues=False, tickLength=0)
         self.getAxis("left").setLabel("Count")
+
+        # Label space below the axis line, expressed in data coordinates.
+        label_space = max_val * 0.18
+
+        for i, lbl in enumerate(labels):
+            wrapped = _wrap_label(lbl)
+            txt = pg.TextItem(wrapped, color=TEXT, anchor=(0.5, 0))
+            txt.setFont(QFont("Segoe UI", 8))
+            txt.setPos(i, -label_space * 0.05)
+            self.addItem(txt)
+
+        # Lock the y-range so the label area below zero is always visible.
+        self.setYRange(-label_space, max_val * 1.12)
+        # Lock x-range so bars are centered with padding.
+        self.setXRange(-0.7, len(values) - 0.3)
 
 
 class PieChartWidget(QWidget):

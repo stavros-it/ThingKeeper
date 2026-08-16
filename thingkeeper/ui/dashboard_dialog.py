@@ -73,8 +73,8 @@ class DashboardDialog(QDialog):
         self.value_chart = BarChartWidget()
 
         charts_grid = QGridLayout()
-        charts_grid.setVerticalSpacing(80)
-        charts_grid.setHorizontalSpacing(20)
+        charts_grid.setVerticalSpacing(12)
+        charts_grid.setHorizontalSpacing(12)
         charts_grid.addWidget(self.qty_chart, 0, 0)
         charts_grid.addWidget(self.status_chart, 0, 1)
         charts_grid.addWidget(self.value_chart, 1, 0)
