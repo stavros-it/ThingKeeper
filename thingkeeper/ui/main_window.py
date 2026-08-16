@@ -284,7 +284,8 @@ class MainWindow(QMainWindow):
     def _filter_combo(self, column: str) -> QComboBox:
         combo = QComboBox()
         combo.addItem(f"(all {column})", "")
-        combo.addItems(distinct_values(column))
+        for v in distinct_values(column):
+            combo.addItem(v, v)
         combo.setMinimumWidth(140)
         return combo
 
@@ -499,7 +500,8 @@ class MainWindow(QMainWindow):
             combo.blockSignals(True)
             combo.clear()
             combo.addItem(f"(all {column})", "")
-            combo.addItems(distinct_values(column))
+            for v in distinct_values(column):
+                combo.addItem(v, v)
             if current:
                 idx = combo.findData(current)
                 combo.setCurrentIndex(idx if idx >= 0 else 0)
