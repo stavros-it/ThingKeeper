@@ -1,7 +1,8 @@
-"""Data access layer: CRUD, filtering and aggregation for items."""
+"""Data access layer: CRUD, filtering, soft-delete, multi-image and aggregation."""
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -27,10 +28,10 @@ class Item:
     location: str = ""
     warranty_end: str = ""
     image_path: str = ""
+    deleted_at: str = ""
     created_at: str = ""
     updated_at: str = ""
 
-    # Convenience: column order used by importers/exporters.
     COLUMNS: tuple = field(default_factory=lambda: (
         "group_name", "type", "brand", "model", "info", "serial",
         "store", "purchase_date", "status", "quantity", "location",
@@ -54,6 +55,7 @@ class Item:
             location=row["location"] or "",
             warranty_end=row["warranty_end"] or "",
             image_path=row["image_path"] or "",
+            deleted_at=row["deleted_at"] or "",
             created_at=row["created_at"] or "",
             updated_at=row["updated_at"] or "",
         )
@@ -77,6 +79,16 @@ class Item:
         }
 
 
+_DATE_FORMATS = (
+    "%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d",
+    "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y",
+    "%d/%m/%y", "%d-%m-%y", "%d.%m.%y",
+    "%m/%d/%Y", "%m-%d-%Y",
+)
+_DMY_RE = re.compile(r"^(\d{1,2})\D(\d{1,2})\D(\d{2,4})$")
+_YMD_RE = re.compile(r"^(\d{4})\D(\d{1,2})\D(\d{1,2})$")
+
+
 def to_iso(value) -> str:
     """Normalise various date formats into ISO (YYYY-MM-DD). Empty stays empty."""
     if value is None or value == "":
@@ -88,13 +100,26 @@ def to_iso(value) -> str:
     s = str(value).strip()
     if not s:
         return ""
-    # Common European formats.
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%d.%m.%Y"):
+    for fmt in _DATE_FORMATS:
         try:
             return datetime.strptime(s, fmt).date().isoformat()
         except ValueError:
             continue
-    return s  # fall back to whatever was given
+    # Tolerate 1-2 digit day/month and 2-digit years: 26.3.24, 5/3/2024
+    m = _YMD_RE.match(s) or _DMY_RE.match(s)
+    if m:
+        parts = [int(p) for p in m.groups()]
+        if len(str(m.group(1))) == 4:
+            y, mo, d = parts
+        else:
+            d, mo, y = parts
+            if y < 100:
+                y += 2000 if y < 70 else 1900
+        try:
+            return date(y, mo, d).isoformat()
+        except ValueError:
+            pass
+    return s
 
 
 def create_item(item: Item) -> int:
@@ -113,7 +138,8 @@ def create_item(item: Item) -> int:
             ),
         )
         conn.commit()
-        return int(cur.lastrowid)
+        item.id = int(cur.lastrowid)
+        return item.id
 
 
 def update_item(item: Item) -> None:
@@ -138,10 +164,84 @@ def update_item(item: Item) -> None:
         conn.commit()
 
 
-def delete_item(item_id: int) -> None:
+def bulk_update(item_ids: Iterable[int], fields: dict) -> None:
+    """Apply the same field updates to many items at once.
+
+    `fields` maps column names to their new values. Only editable text/integer
+    columns are allowed.
+    """
+    allowed = {
+        "group_name", "type", "brand", "store", "location", "status",
+        "purchase_date", "warranty_end",
+    }
+    bad = set(fields) - allowed
+    if bad:
+        raise ValueError(f"Cannot bulk-update columns: {bad}")
+    if not fields or not item_ids:
+        return
+    ids = list(item_ids)
+    assignments = ", ".join(f"{col}=?" for col in fields)
+    params = list(fields.values()) + ids
+    placeholders = ",".join("?" * len(ids))
+    sql = (
+        f"UPDATE items SET {assignments}, updated_at=datetime('now') "
+        f"WHERE id IN ({placeholders})"
+    )
     with connect() as conn:
+        conn.execute(sql, params)
+        conn.commit()
+
+
+def soft_delete(item_id: int) -> None:
+    """Move an item to trash (sets deleted_at). Recoverable via restore_item."""
+    with connect() as conn:
+        conn.execute(
+            "UPDATE items SET deleted_at=datetime('now') WHERE id=?", (item_id,)
+        )
+        conn.commit()
+
+
+def restore_item(item_id: int) -> None:
+    with connect() as conn:
+        conn.execute(
+            "UPDATE items SET deleted_at=NULL WHERE id=?", (item_id,)
+        )
+        conn.commit()
+
+
+def hard_delete(item_id: int) -> None:
+    """Permanently delete an item and its images. Cannot be undone."""
+    with connect() as conn:
+        conn.execute("DELETE FROM item_images WHERE item_id=?", (item_id,))
         conn.execute("DELETE FROM items WHERE id=?", (item_id,))
         conn.commit()
+
+
+def delete_item(item_id: int) -> None:
+    """Default delete = soft delete (recoverable from trash for 30 days)."""
+    soft_delete(item_id)
+
+
+def purge_old_trash(days: int = 30) -> int:
+    """Permanently delete items that have been in trash longer than `days`.
+
+    Returns the number of items purged.
+    """
+    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT id FROM items WHERE deleted_at IS NOT NULL AND deleted_at < ?",
+            (cutoff,),
+        ).fetchall()
+        ids = [r["id"] for r in rows]
+        if ids:
+            placeholders = ",".join("?" * len(ids))
+            conn.execute(
+                f"DELETE FROM item_images WHERE item_id IN ({placeholders})", ids
+            )
+            conn.execute(f"DELETE FROM items WHERE id IN ({placeholders})", ids)
+        conn.commit()
+    return len(ids)
 
 
 def get_item(item_id: int) -> Item | None:
@@ -151,13 +251,14 @@ def get_item(item_id: int) -> Item | None:
 
 
 def find_by_serial(serial: str) -> Item | None:
-    """Return the first item whose serial matches (case-insensitive, trimmed)."""
+    """Return the first non-deleted item whose serial matches."""
     s = (serial or "").strip()
     if not s:
         return None
     with connect() as conn:
         row = conn.execute(
-            "SELECT * FROM items WHERE LOWER(TRIM(serial)) = LOWER(?) LIMIT 1",
+            "SELECT * FROM items "
+            "WHERE LOWER(TRIM(serial)) = LOWER(?) AND deleted_at IS NULL LIMIT 1",
             (s,),
         ).fetchone()
     return Item.from_row(row) if row else None
@@ -169,10 +270,14 @@ def list_items(
     type_: str = "",
     brand: str = "",
     status: str = "",
+    include_deleted: bool = False,
 ) -> list[Item]:
     """Return items filtered by text search and dropdown filters."""
     clauses: list[str] = []
     params: list = []
+
+    if not include_deleted:
+        clauses.append("deleted_at IS NULL")
 
     if search:
         like = f"%{search.lower()}%"
@@ -208,15 +313,25 @@ def list_items(
     return [Item.from_row(r) for r in rows]
 
 
+def list_trash() -> list[Item]:
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM items WHERE deleted_at IS NOT NULL "
+            "ORDER BY deleted_at DESC"
+        ).fetchall()
+    return [Item.from_row(r) for r in rows]
+
+
 def distinct_values(column: str) -> list[str]:
-    """Return non-empty distinct values for a column, sorted."""
+    """Return non-empty distinct values for a column, sorted (excludes trash)."""
     allowed = {"group_name", "type", "brand", "status", "store", "location"}
     if column not in allowed:
         raise ValueError(f"Unknown column: {column}")
     with connect() as conn:
         rows = conn.execute(
             f"SELECT DISTINCT {column} AS v FROM items "
-            f"WHERE {column} IS NOT NULL AND TRIM({column}) <> '' ORDER BY v"
+            f"WHERE {column} IS NOT NULL AND TRIM({column}) <> '' "
+            f"AND deleted_at IS NULL ORDER BY v"
         ).fetchall()
     return [r["v"] for r in rows]
 
@@ -229,20 +344,21 @@ def counts_by(column: str) -> list[tuple[str, int]]:
         rows = conn.execute(
             f"SELECT {column} AS k, COUNT(*) AS c FROM items "
             f"WHERE {column} IS NOT NULL AND TRIM({column}) <> '' "
+            f"AND deleted_at IS NULL "
             f"GROUP BY {column} ORDER BY c DESC"
         ).fetchall()
     return [(r["k"], r["c"]) for r in rows]
 
 
 def warranty_expiring(within_days: int = config.WARRANTY_SOON_DAYS) -> list[Item]:
-    """Items whose warranty_end is in the future but within `within_days`."""
     today = date.today()
     horizon = today + timedelta(days=within_days)
     with connect() as conn:
         rows = conn.execute(
             """
             SELECT * FROM items
-            WHERE warranty_end IS NOT NULL AND TRIM(warranty_end) <> ''
+            WHERE deleted_at IS NULL
+              AND warranty_end IS NOT NULL AND TRIM(warranty_end) <> ''
               AND warranty_end >= ? AND warranty_end <= ?
             ORDER BY warranty_end
             """,
@@ -255,7 +371,8 @@ def warranty_expired() -> list[Item]:
     today = date.today().isoformat()
     with connect() as conn:
         rows = conn.execute(
-            "SELECT * FROM items WHERE warranty_end < ? ORDER BY warranty_end",
+            "SELECT * FROM items WHERE deleted_at IS NULL AND warranty_end < ? "
+            "ORDER BY warranty_end",
             (today,),
         ).fetchall()
     return [Item.from_row(r) for r in rows]
@@ -263,7 +380,9 @@ def warranty_expired() -> list[Item]:
 
 def total_quantity() -> int:
     with connect() as conn:
-        row = conn.execute("SELECT COALESCE(SUM(quantity),0) AS s FROM items").fetchone()
+        row = conn.execute(
+            "SELECT COALESCE(SUM(quantity),0) AS s FROM items WHERE deleted_at IS NULL"
+        ).fetchone()
     return int(row["s"])
 
 
@@ -272,11 +391,11 @@ def all_items() -> list[Item]:
 
 
 def bulk_insert(items: Iterable[Item]) -> int:
-    """Insert many items; returns count inserted."""
+    """Insert many items; returns count inserted. Sets id on each item."""
     count = 0
     with connect() as conn:
         for it in items:
-            conn.execute(
+            cur = conn.execute(
                 """
                 INSERT INTO items
                   (group_name, type, brand, model, info, serial, store,
@@ -289,6 +408,63 @@ def bulk_insert(items: Iterable[Item]) -> int:
                     it.quantity, it.location, it.warranty_end, it.image_path,
                 ),
             )
+            it.id = int(cur.lastrowid)
             count += 1
         conn.commit()
     return count
+
+
+# ---------------------------------------------------------------- multi-image
+
+def add_image(item_id: int, path: str) -> int:
+    with connect() as conn:
+        cur = conn.execute(
+            "INSERT INTO item_images (item_id, path) VALUES (?, ?)",
+            (item_id, path),
+        )
+        conn.commit()
+        return int(cur.lastrowid)
+
+
+def remove_image(image_id: int) -> None:
+    with connect() as conn:
+        conn.execute("DELETE FROM item_images WHERE id=?", (image_id,))
+        conn.commit()
+
+
+def list_images(item_id: int) -> list[tuple[int, str]]:
+    """Return (image_id, path) pairs for an item."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT id, path FROM item_images WHERE item_id=? ORDER BY id",
+            (item_id,),
+        ).fetchall()
+    return [(r["id"], r["path"]) for r in rows]
+
+
+def set_images(item_id: int, paths: list[str]) -> None:
+    """Replace the full set of images for an item."""
+    with connect() as conn:
+        conn.execute("DELETE FROM item_images WHERE item_id=?", (item_id,))
+        for p in paths:
+            conn.execute(
+                "INSERT INTO item_images (item_id, path) VALUES (?, ?)",
+                (item_id, p),
+            )
+        conn.commit()
+
+
+def duplicate_item(item_id: int, new_serial: str = "") -> int:
+    """Clone an item (without serial by default) and return the new id."""
+    src = get_item(item_id)
+    if src is None:
+        raise ValueError(f"Item {item_id} not found")
+    src.id = None
+    src.serial = new_serial
+    src.created_at = ""
+    src.updated_at = ""
+    src.deleted_at = ""
+    new_id = create_item(src)
+    for _img_id, path in list_images(item_id):
+        add_image(new_id, path)
+    return new_id

@@ -1,4 +1,4 @@
-"""Add/Edit item dialog with image attachment and warranty support."""
+"""Add/Edit item dialog with multi-image gallery, warranty and drag-and-drop."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import uuid
 from datetime import date
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSize, Qt, QUrl
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -20,6 +20,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QPushButton,
     QSpinBox,
@@ -29,7 +31,9 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import config
-from ..repository import Item, distinct_values
+from ..repository import Item, distinct_values, list_images
+
+_IMAGE_FILTERS = "Images (*.png *.jpg *.jpeg *.bmp *.webp *.gif);;All files (*.*)"
 
 
 class ItemDialog(QDialog):
@@ -39,14 +43,16 @@ class ItemDialog(QDialog):
         super().__init__(parent)
         self._item = item
         self._image_path: str = ""
+        self._extra_images: list[str] = []
         self._build_ui()
         if item is not None:
             self._load_item(item)
+        self.setAcceptDrops(True)
 
     # ------------------------------------------------------------------ UI
     def _build_ui(self) -> None:
         self.setWindowTitle("ThingKeeper — Item")
-        self.setMinimumWidth(640)
+        self.setMinimumWidth(680)
 
         self.group_edit = self._combo_edit("group_name")
         self.type_edit = self._combo_edit("type")
@@ -78,19 +84,20 @@ class ItemDialog(QDialog):
         self._on_warranty_toggled(False)
 
         self.info_edit = QTextEdit()
-        self.info_edit.setMaximumHeight(90)
+        self.info_edit.setMaximumHeight(80)
 
-        # Image attachment.
+        # Primary image.
         self.image_label = QLabel("No image")
-        self.image_label.setFixedSize(220, 160)
+        self.image_label.setFixedSize(200, 150)
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_label.setStyleSheet(
             "QLabel { background:#f4f4f4; border:1px dashed #bbb; border-radius:6px; }"
         )
-        self.attach_btn = QPushButton("Choose image…")
-        self.attach_btn.clicked.connect(self._choose_image)
+        self.image_label.setAcceptDrops(True)
+        self.attach_btn = QPushButton("Choose…")
+        self.attach_btn.clicked.connect(self._choose_primary_image)
         self.clear_img_btn = QPushButton("Remove")
-        self.clear_img_btn.clicked.connect(self._clear_image)
+        self.clear_img_btn.clicked.connect(self._clear_primary_image)
 
         img_row = QHBoxLayout()
         img_row.addWidget(self.image_label)
@@ -101,6 +108,26 @@ class ItemDialog(QDialog):
         img_row.addLayout(img_col, 1)
         img_widget = QWidget()
         img_widget.setLayout(img_row)
+
+        # Extra images gallery.
+        self.extra_list = QListWidget()
+        self.extra_list.setIconSize(QSize(60, 60))
+        self.extra_list.setMaximumHeight(110)
+        self.extra_list.setAcceptDrops(True)
+        self.extra_add_btn = QPushButton("Add…")
+        self.extra_add_btn.clicked.connect(self._add_extra_image)
+        self.extra_remove_btn = QPushButton("Remove")
+        self.extra_remove_btn.clicked.connect(self._remove_extra_image)
+
+        extra_btns = QHBoxLayout()
+        extra_btns.addWidget(self.extra_add_btn)
+        extra_btns.addWidget(self.extra_remove_btn)
+        extra_btns.addStretch(1)
+        extra_col = QVBoxLayout()
+        extra_col.addWidget(self.extra_list)
+        extra_col.addLayout(extra_btns)
+        extra_widget = QWidget()
+        extra_widget.setLayout(extra_col)
 
         warranty_row = QHBoxLayout()
         warranty_row.addWidget(self.warranty_edit, 1)
@@ -122,7 +149,8 @@ class ItemDialog(QDialog):
         form.addRow("Purchase date:", self.purchase_edit)
         form.addRow("Warranty end:", warranty_widget)
         form.addRow("Notes:", self.info_edit)
-        form.addRow("Image:", img_widget)
+        form.addRow("Primary image:", img_widget)
+        form.addRow("More images:", extra_widget)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
@@ -162,7 +190,11 @@ class ItemDialog(QDialog):
             self.warranty_edit.setDate(self._parse_date(item.warranty_end, date.today()))
         self.info_edit.setPlainText(item.info)
         self._image_path = item.image_path
-        self._refresh_image_preview()
+        self._refresh_primary_preview()
+        if item.id is not None:
+            for _img_id, path in list_images(item.id):
+                self._extra_images.append(path)
+            self._refresh_extra_list()
 
     @staticmethod
     def _parse_date(value: str, fallback: date) -> date:
@@ -173,29 +205,29 @@ class ItemDialog(QDialog):
         except ValueError:
             return fallback
 
-    def _choose_image(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Choose image", "",
-            "Images (*.png *.jpg *.jpeg *.bmp *.webp *.gif);;All files (*.*)",
-        )
+    # --------------------------------------------------------- image helpers
+    def _copy_to_attachments(self, source: str) -> str:
+        ext = Path(source).suffix or ".img"
+        target = config.ATTACHMENTS_DIR / f"{uuid.uuid4().hex}{ext}"
+        shutil.copyfile(source, target)
+        return str(target)
+
+    def _choose_primary_image(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Choose image", "", _IMAGE_FILTERS)
         if not path:
             return
-        # Copy into the attachments dir with a unique name to avoid collisions.
-        ext = Path(path).suffix or ".img"
-        target = config.ATTACHMENTS_DIR / f"{uuid.uuid4().hex}{ext}"
         try:
-            shutil.copyfile(path, target)
+            self._image_path = self._copy_to_attachments(path)
         except OSError as exc:
             QMessageBox.warning(self, "Image", f"Could not copy image:\n{exc}")
             return
-        self._image_path = str(target)
-        self._refresh_image_preview()
+        self._refresh_primary_preview()
 
-    def _clear_image(self) -> None:
+    def _clear_primary_image(self) -> None:
         self._image_path = ""
-        self._refresh_image_preview()
+        self._refresh_primary_preview()
 
-    def _refresh_image_preview(self) -> None:
+    def _refresh_primary_preview(self) -> None:
         if self._image_path and Path(self._image_path).exists():
             pix = QPixmap(self._image_path)
             if not pix.isNull():
@@ -210,6 +242,63 @@ class ItemDialog(QDialog):
         self.image_label.setText("No image")
         self.image_label.setPixmap(QPixmap())
 
+    def _add_extra_image(self) -> None:
+        paths, _ = QFileDialog.getOpenFileNames(self, "Choose images", "", _IMAGE_FILTERS)
+        for p in paths:
+            try:
+                self._extra_images.append(self._copy_to_attachments(p))
+            except OSError as exc:
+                QMessageBox.warning(self, "Image", f"Could not copy {p}:\n{exc}")
+        self._refresh_extra_list()
+
+    def _remove_extra_image(self) -> None:
+        row = self.extra_list.currentRow()
+        if 0 <= row < len(self._extra_images):
+            self._extra_images.pop(row)
+            self._refresh_extra_list()
+
+    def _refresh_extra_list(self) -> None:
+        self.extra_list.clear()
+        for path in self._extra_images:
+            name = Path(path).name
+            item = QListWidgetItem(name)
+            pix = QPixmap(path)
+            if not pix.isNull():
+                item.setIcon(
+                    pix.scaled(
+                        60, 60,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                )
+            self.extra_list.addItem(item)
+
+    # -------------------------------------------------------- drag-and-drop
+    def dragEnterEvent(self, event) -> None:  # noqa: N802 - Qt override
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event) -> None:  # noqa: N802 - Qt override
+        urls: list[QUrl] = event.mimeData().urls()
+        added = False
+        for url in urls:
+            path = url.toLocalFile()
+            if not path or not Path(path).is_file():
+                continue
+            try:
+                self._extra_images.append(self._copy_to_attachments(path))
+                added = True
+            except OSError:
+                continue
+        if added:
+            self._refresh_extra_list()
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    # --------------------------------------------------------- validation
     def _validate_and_accept(self) -> None:
         if not self.model_edit.text().strip() and not self.serial_edit.text().strip():
             QMessageBox.warning(
@@ -241,3 +330,7 @@ class ItemDialog(QDialog):
         base.info = self.info_edit.toPlainText().strip()
         base.image_path = self._image_path
         return base
+
+    def extra_images(self) -> list[str]:
+        """Return the list of extra image paths (excluding the primary image)."""
+        return list(self._extra_images)

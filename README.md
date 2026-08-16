@@ -7,22 +7,23 @@ single-file storage.
 ## Features
 
 - **Full CRUD** — add, edit, delete and browse inventory items.
+- **Undo / redo** — every item operation is reversible (`Ctrl+Z` / `Ctrl+Y`).
 - **Rich item model** — group, type, brand, model, serial, store, purchase date,
   status, quantity, location, warranty end date and free-form notes.
 - **Status tracking** — `AVAILABLE`, `IN USE`, `LOANED`, `BROKEN`, `SOLD`.
 - **Warranty & expiry** — items with an upcoming or expired warranty are flagged.
-- **Image attachments** — attach a photo or receipt to any item.
+- **Multi-image attachments** — attach multiple photos/receipts per item;
+  drag-and-drop directly onto the item dialog.
+- **Bulk edit** — change a field (status, location, group…) across many items at once.
+- **Duplicate item** — clone an existing item with one click (`Ctrl+D`).
+- **Trash / soft delete** — deleted items go to trash, recoverable for 30 days.
 - **Search & filter** — instant text search plus filters by group, type, brand and status.
-- **Serial / barcode scan** — keyboard-wedge USB scanner support: focus the scan box,
-  pull the trigger, and the matching item opens.
-- **Import**
-  - Excel workbook (`.xlsx`) — maps the original *My Equipment.xlsx* layout.
-  - Compressed JSON archive (`.tkz`) — full backup including attachments.
-  - CSV (`.csv`).
-- **Export**
-  - Compressed JSON archive (`.tkz`) — portable backup with attachments.
-  - CSV (`.csv`).
-  - Excel workbook (`.xlsx`).
+- **Saved filter presets** — name and recall filter combinations.
+- **Column show/hide & reorder** — right-click the table header, drag columns to reorder.
+- **Serial / barcode scan** — keyboard-wedge USB scanner support.
+- **Import** — Excel (`.xlsx`), compressed JSON archive (`.tkz`), CSV (`.csv`).
+- **Export** — `.tkz` (with attachments), CSV, Excel, PDF report.
+- **Recent files** — recently imported/exported files listed in the File menu.
 - **Reports** — generate PDF inventory summaries (by group, status, expiring warranty).
 
 ## Install
@@ -63,10 +64,15 @@ new fields default to sensible values (status `AVAILABLE`, quantity `1`).
 | Action            | Shortcut        |
 | ----------------- | --------------- |
 | New item          | `Ctrl+N`        |
-| Edit item         | `Enter` / `Ctrl+E` |
+| Edit item         | `Ctrl+E`        |
+| Duplicate item    | `Ctrl+D`        |
 | Delete item       | `Delete`        |
+| Undo              | `Ctrl+Z`        |
+| Redo              | `Ctrl+Y`        |
+| Bulk edit         | `Ctrl+B`        |
 | Scan serial       | `Ctrl+K`        |
 | Search            | `Ctrl+F`        |
+| Generate report   | `Ctrl+R`        |
 | Refresh           | `F5`            |
 | Quit              | `Ctrl+Q`        |
 
@@ -80,17 +86,20 @@ ThingKeeper/
 │   ├── __init__.py
 │   ├── __main__.py
 │   ├── config.py           # paths & constants
-│   ├── database.py         # SQLite connection + schema
-│   ├── repository.py       # data access (CRUD + queries)
-│   ├── importers.py        # xlsx / JSON / CSV import
-│   ├── exporters.py        # JSON / CSV / xlsx / PDF export
+│   ├── database.py         # SQLite connection + schema + migrations
+│   ├── repository.py       # data access (CRUD, multi-image, soft-delete)
+│   ├── commands.py         # undo/redo command pattern + UndoStack
+│   ├── importers.py        # xlsx / .tkz / CSV import
+│   ├── exporters.py        # .tkz / CSV / xlsx / PDF export
 │   ├── scanner.py          # serial-scan helper
 │   └── ui/
 │       ├── __init__.py
-│       ├── main_window.py
-│       ├── item_dialog.py
-│       ├── scan_dialog.py
-│       └── reports_dialog.py
+│       ├── main_window.py       # table, filters, toolbar, undo/redo, saved filters
+│       ├── item_dialog.py       # add/edit (multi-image gallery + drag-and-drop)
+│       ├── bulk_edit_dialog.py  # bulk field change
+│       ├── scan_dialog.py       # serial scan
+│       ├── trash_dialog.py      # view / restore / purge deleted items
+│       └── reports_dialog.py    # PDF report
 └── data/                   # runtime data (git-ignored)
     ├── thingkeeper.db
     └── attachments/

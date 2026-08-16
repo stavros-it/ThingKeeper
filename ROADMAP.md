@@ -35,21 +35,22 @@ maintainable desktop app.
 
 ---
 
-## v0.2 — Productivity (Planned)
+## v0.2 — Productivity (Done)
 
 **Goal:** make daily use faster and more forgiving.
 
-- **Undo / redo** for item edits and deletes (command pattern + history stack)
-- **Bulk edit** — change status / location / group for multiple selected items
-- **Duplicate item** — clone an existing item with a new serial
-- **Keyboard navigation** — `Up`/`Down`/`Enter`/`Insert`/`Delete` on the table
-- **Column show/hide & ordering** — persist user preference via `QSettings`
-- **Saved filters** — name and recall filter presets
-- **Recent imports / exports** list in the File menu
-- **Trash / soft delete** — recoverable deletion for 30 days
-- **Multi-image attachments** — gallery per item instead of single image
+- **Undo / redo** for item edits and deletes (command pattern + history stack in `commands.py`)
+- **Bulk edit** — change status / location / group for multiple selected items (`Ctrl+B`)
+- **Duplicate item** — clone an existing item with a new serial (`Ctrl+D`)
+- **Keyboard navigation** — `Delete`, `Ctrl+N`, `Ctrl+E`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+Y` via `QAction` shortcuts
+- **Column show/hide & ordering** — header right-click menu, drag-to-reorder, persisted via `QSettings`
+- **Saved filters** — name and recall filter presets, stored as JSON in `QSettings`
+- **Recent imports / exports** list in the File menu (last 8 each, `QSettings`)
+- **Trash / soft delete** — `deleted_at` column, 30-day retention, `TrashDialog` for restore/purge
+- **Multi-image attachments** — `item_images` table, gallery in `ItemDialog`, included in `.tkz` archives
 - **Drag-and-drop** images onto an item dialog to attach
-- **Date parsing tolerance** — accept `2024-03-26`, `26/03/2024`, `26.3.24`
+- **Date parsing tolerance** — `to_iso()` accepts `2024-03-26`, `26/03/2024`, `26.3.24`, `5-3-24`, `3/5/2024`
+- **Minimal migration runner** — `schema_version` table + additive migrations (brought forward from v0.5)
 
 ---
 
@@ -86,7 +87,7 @@ maintainable desktop app.
 
 - **Automatic backup** — daily `.tkz` snapshot to a configurable folder
 - **Backup rotation** — keep last N backups, prune older
-- **Schema migrations** — versioned `schema_version` table + migration runner
+- ~~**Schema migrations** — versioned `schema_version` table + migration runner~~ (Done in v0.2)
 - **Data integrity check** — Tools → Verify database (orphan attachments, etc.)
 - **Attachment cleanup** — remove image files no longer referenced by any item
 - **Encrypted archive export** — optional passphrase-protected `.tkz`

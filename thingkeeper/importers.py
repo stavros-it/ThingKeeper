@@ -163,15 +163,28 @@ def import_archive(path: str | Path) -> ImportResult:
         attach_names = {
             Path(n).name for n in names if n.startswith("attachments/")
         }
-        for record, item in zip(data, items):
+        extra_to_restore: list[tuple[int, list[str]]] = []
+        for idx, (record, item) in enumerate(zip(data, items)):
             img = record.get("image_path") or ""
             if img:
                 base = Path(img).name
                 if base in attach_names:
                     item.image_path = str(config.ATTACHMENTS_DIR / base)
+            extras = record.get("extra_images") or []
+            if extras and item.id is None:
+                # Items haven't been inserted yet; collect for after bulk_insert.
+                extra_to_restore.append((idx, [
+                    str(config.ATTACHMENTS_DIR / Path(e).name)
+                    for e in extras if Path(e).name in attach_names
+                ]))
 
         imported = bulk_insert(items)
-        # imported already counts items; attachments restored separately
+        # Now that items have IDs, restore extra images.
+        from .repository import add_image  # local to avoid cycle at import time
+        for idx, paths in extra_to_restore:
+            if idx < len(items) and items[idx].id is not None:
+                for p in paths:
+                    add_image(items[idx].id, p)
         return ImportResult(imported, 0, errors)
 
 

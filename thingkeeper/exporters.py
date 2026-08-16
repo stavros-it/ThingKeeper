@@ -14,6 +14,7 @@ from .repository import (
     Item,
     all_items,
     counts_by,
+    list_images,
     total_quantity,
     warranty_expired,
     warranty_expiring,
@@ -62,10 +63,19 @@ def export_archive(path: str | Path, items: list[Item] | None = None) -> Path:
         rec = it.as_dict()
         if it.image_path:
             base = Path(it.image_path).name
-            rec["image_path"] = base  # store portable name
+            rec["image_path"] = base
             p = Path(it.image_path)
             if p.exists():
                 attach_seen.add(str(p))
+        # Include extra images from the item_images table.
+        extra = []
+        if it.id is not None:
+            for _img_id, img_path in list_images(it.id):
+                p = Path(img_path)
+                extra.append(p.name)
+                if p.exists():
+                    attach_seen.add(str(p))
+        rec["extra_images"] = extra
         records.append(rec)
 
     payload = json.dumps(records, ensure_ascii=False, indent=2)

@@ -94,10 +94,11 @@ owner's personal inventory.
 
 - `database.py` knows only about `sqlite3` and `config`.
 - `repository.py` depends on `database.py` and `config`. No Qt imports.
+- `commands.py` depends on `repository.py`. No Qt imports.
 - `importers.py` / `exporters.py` depend on `repository.py` and `config`.
   No Qt imports. (They may be imported from headless scripts.)
-- `ui/*.py` depend on `repository.py`, `importers.py`, `exporters.py`,
-  `scanner.py`. No direct `sqlite3` use.
+- `ui/*.py` depend on `repository.py`, `commands.py`, `importers.py`,
+  `exporters.py`, `scanner.py`. No direct `sqlite3` use.
 - `app.py` is the only module that constructs `QApplication`.
 
 These rules keep the data layer unit-testable without a display server.
@@ -123,11 +124,33 @@ These rules keep the data layer unit-testable without a display server.
 | `quantity`      | INTEGER  | >= 1 |
 | `location`      | TEXT     | room / shelf / box |
 | `warranty_end`  | TEXT     | ISO date, empty if none |
-| `image_path`    | TEXT     | absolute path under `data/attachments/` |
+| `image_path`    | TEXT     | absolute path under `data/attachments/` (primary image) |
+| `deleted_at`    | TEXT     | non-null when soft-deleted (in trash); null otherwise |
 | `created_at`    | TEXT     | `datetime('now')` |
 | `updated_at`    | TEXT     | `datetime('now')`, refreshed on update |
 
-**Indexes:** `group_name`, `type`, `brand`, `status`, `serial`.
+**Indexes:** `group_name`, `type`, `brand`, `status`, `serial`, `deleted_at`.
+
+### `item_images` table (multi-image, v0.2)
+
+| Column       | Type     | Notes |
+|--------------|----------|-------|
+| `id`         | INTEGER  | Primary key, autoincrement |
+| `item_id`    | INTEGER  | FK to `items(id)` ON DELETE CASCADE |
+| `path`       | TEXT     | absolute path under `data/attachments/` |
+| `created_at` | TEXT     | `datetime('now')` |
+
+**Index:** `item_id`.
+
+### `schema_version` table (migration runner, v0.2)
+
+| Column    | Type    | Notes |
+|-----------|---------|-------|
+| `version` | INTEGER | Primary key — the schema version reached |
+| `applied` | TEXT    | `datetime('now')` — when the migration was applied |
+
+The migration runner in `database.py` applies additive migrations in order
+and records each applied version. Current schema version: 2.
 
 ### Why dates are stored as TEXT
 
@@ -155,6 +178,7 @@ ThingKeeper/
 ├── README.md                    # user-facing docs
 ├── ROADMAP.md                   # development roadmap
 ├── PROJECT_CONTEXT.md           # this file
+├── AGENTS.md                    # workflow + conventions for contributors
 ├── LICENSE                      # Proprietary
 ├── .gitignore
 └── thingkeeper/
@@ -162,16 +186,19 @@ ThingKeeper/
     ├── __main__.py              # python -m thingkeeper
     ├── app.py                   # QApplication bootstrap
     ├── config.py                # paths + constants
-    ├── database.py              # sqlite3 connection + schema
-    ├── repository.py            # Item dataclass + CRUD + queries
+    ├── database.py              # sqlite3 connection + schema + migration runner
+    ├── repository.py            # Item dataclass + CRUD + queries + multi-image + soft-delete
+    ├── commands.py              # undo/redo command pattern + UndoStack
     ├── importers.py             # Excel / archive / CSV import
     ├── exporters.py             # archive / CSV / Excel / PDF export
     ├── scanner.py              # serial lookup helper
     └── ui/
         ├── __init__.py
-        ├── main_window.py       # table, filters, menus, toolbar
-        ├── item_dialog.py       # add/edit dialog (image + warranty)
+        ├── main_window.py       # table, filters, menus, toolbar, undo/redo, saved filters
+        ├── item_dialog.py       # add/edit dialog (multi-image gallery + drag-and-drop + warranty)
+        ├── bulk_edit_dialog.py  # bulk field change for selected items
         ├── scan_dialog.py       # serial scan dialog
+        ├── trash_dialog.py      # view / restore / purge soft-deleted items
         └── reports_dialog.py    # PDF report dialog
 ```
 
