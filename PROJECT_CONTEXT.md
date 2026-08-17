@@ -221,7 +221,7 @@ ThingKeeper/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml               # ruff + pytest on Ubuntu + Windows, Python 3.10 + 3.12
-├── tests/                       # pytest + pytest-qt test suite (120 tests)
+├── tests/                       # pytest + pytest-qt test suite (140 tests)
 └── thingkeeper/
     ├── __init__.py              # version
     ├── __main__.py              # python -m thingkeeper
@@ -235,6 +235,8 @@ ThingKeeper/
     ├── backup.py                # timestamped backups + rotation + BackupScheduler
     ├── integrity.py             # data integrity check + orphan attachment cleanup
     ├── scanner.py              # serial lookup helper
+    ├── logging_config.py        # RotatingFileHandler + sys.excepthook (crash log)
+    ├── i18n.py                  # tr() function + Greek translations + language switcher
     ├── assets/
     │   ├── app.ico             # Windows icon (multi-size, used for shortcuts)
     │   ├── icon.png            # 512x512 PNG
@@ -254,7 +256,8 @@ ThingKeeper/
         ├── scan_dialog.py       # serial scan dialog
         ├── trash_dialog.py      # view / restore / purge soft-deleted items
         ├── integrity_dialog.py  # data integrity check + cleanup UI
-        ├── settings_dialog.py   # backup folder, retention, auto-backup interval
+        ├── settings_dialog.py   # backup folder, retention, auto-backup interval, language
+        ├── help_dialog.py        # keyboard shortcut cheatsheet + first-launch tour
         ├── theme.py             # dark palette + QSS stylesheet + semantic colors
         └── reports_dialog.py    # PDF report dialog
 ```
@@ -273,7 +276,10 @@ tests/
     ├── test_commands.py       # undo/redo command pattern + UndoStack
     ├── test_cli.py            # `python -m thingkeeper --report PATH`
     ├── test_ui.py             # MainWindow + all dialogs (offscreen)
-    └── test_theme.py          # dark palette, styling, Fusion style
+    ├── test_theme.py          # dark palette, styling, Fusion style
+    ├── test_i18n.py           # tr(), language switching, Greek translations
+    ├── test_logging.py        # RotatingFileHandler setup, excepthook
+    └── test_help.py           # ShortcutsDialog + TourDialog (bilingual)
 ```
 
 Run with `python -m pytest tests/ -q`.
@@ -391,6 +397,50 @@ that blocking is acceptable. If imports of tens of thousands of rows ever
 become a real use case, a `QThread` worker should be introduced — but only
 then; threading would complicate every import path for no current benefit.
 
+### 6.11 Crash logging via RotatingFileHandler + excepthook
+
+`thingkeeper/logging_config.py` configures a `RotatingFileHandler` (512 KB
+per file, 3 backups) writing to `data/thingkeeper.log`, plus an
+`sys.excepthook` override that logs any unhandled exception with a full
+traceback at `CRITICAL` level before delegating to `sys.__excepthook__`.
+`setup_logging()` is idempotent (guarded by a module-level `_installed`
+flag) and is called at the very top of `app.run()` and again by
+`launch.pyw::_setup_logging()` so the log captures both console and
+no-console launch paths. `THINGKEEPER_DEBUG=1` enables `DEBUG` level.
+The log file is git-ignored; users can open it via **Tools → Open log
+file** which calls `os.startfile` (Windows), `open` (macOS), or
+`xdg-open` (Linux).
+
+### 6.12 Internationalisation is a Python dict, not gettext
+
+`thingkeeper/i18n.py` provides a lightweight `tr(text)` function that
+looks up the English source string in a `_EL` dict when the active
+language is `el`; for `en` it returns the string unchanged. No `.po` /
+`.mo` files, no `gettext` machinery — the table is small enough (~80
+strings) to live in one Python file. The active language is persisted
+in `QSettings("ui/language")` and restored on import via `_load_lang()`.
+`set_language(code)` updates the in-memory `_LANG` and persists it.
+Wrapping pattern: `from ..i18n import tr` then `tr("&File")` in any UI
+code. Mnemonic markers (`&`) are preserved through the table so Qt
+shortcuts keep working in both languages.
+
+### 6.13 In-app help: shortcuts table + multi-step tour
+
+`thingkeeper/ui/help_dialog.py` ships two dialogs, both bilingual:
+
+- `ShortcutsDialog` — a 2-column `QTableWidget` of all keyboard
+  shortcuts (Ctrl+N, Ctrl+E, F1, etc.). Content is hardcoded in
+  `_SHORTCUTS_EN` / `_SHORTCUTS_EL` lists at module level (no DB).
+- `TourDialog` — an 8-step first-launch tour with Previous/Next
+  navigation and a "1 / 8" progress label. On the last step, the Next
+  button is hidden and a Finish button appears. Content is in
+  `_TOUR_STEPS_EN` / `_TOUR_STEPS_EL`.
+
+Both are reachable from the **Help** menu: **Keyboard shortcuts… (F1)**
+and **First-launch tour…**. The language is read at construction time
+via `get_language()`, so the user gets the right locale by changing it
+in Settings first.
+
 ---
 
 ## 7. Conventions
@@ -490,6 +540,11 @@ This is the pattern used by the smoke tests run during the initial build.
 | Add a new report                        | `exporters.export_pdf_report()` or a sibling function + `reports_dialog.py` |
 | Change warranty display logic           | `_warranty_status()` + `_fmt_date()` in `main_window.py` |
 | Change table column persistence        | `_save_column_state()` + `_restore_column_state()` in `main_window.py` |
+| Add a new translation                   | add the English key + Greek value to `_EL` in `i18n.py`, then wrap the source string with `tr()` at the call site |
+| Add a new language                      | add a `_XX` dict and a branch in `tr()` in `i18n.py`, plus the entry in `available_languages()` |
+| Change log format / rotation size       | `logging_config.py` |
+| Add a keyboard shortcut to cheatsheet   | `_SHORTCUTS_EN` + `_SHORTCUTS_EL` in `help_dialog.py` |
+| Add or change a tour step               | `_TOUR_STEPS_EN` + `_TOUR_STEPS_EL` in `help_dialog.py` |
 
 ---
 

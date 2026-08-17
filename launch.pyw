@@ -47,13 +47,8 @@ def _redirect_streams() -> Path:
 
 
 def _setup_logging() -> None:
-    level = logging.DEBUG if os.getenv("THINGKEEPER_DEBUG") else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        stream=sys.stderr,
-    )
+    from thingkeeper.logging_config import setup_logging
+    setup_logging()
 
 
 def _show_fatal_error(exc: BaseException, log_path: Path) -> None:

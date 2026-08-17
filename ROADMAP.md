@@ -119,9 +119,10 @@ maintainable desktop app.
 - **Accessibility pass** — status tips on all toolbar actions; accessible names
   and descriptions on search box + items table; keyboard shortcuts throughout
 - ~~**In-app help** — first-launch tour, keyboard shortcut cheatsheet~~ (Deferred — see Long-term)
-- ~~**Crash reporting** — local-only log file the user can share on issue~~ (Deferred — see Long-term)
-- **Test suite** — `tests/` with pytest + pytest-qt; 120 tests covering database,
-  repository, importers, exporters, backup, integrity, commands, CLI, UI, theme
+- ~~**Crash reporting** — local-only log file the user can share on issue~~ (Done in v1.2)
+- **Test suite** — `tests/` with pytest + pytest-qt; 140 tests covering database,
+  repository, importers, exporters, backup, integrity, commands, CLI, UI, theme,
+  i18n, logging, and help
 - **CI** — GitHub Actions (`.github/workflows/ci.yml`) running ruff + pytest on
   Ubuntu + Windows, Python 3.10 + 3.12
 
@@ -162,12 +163,42 @@ maintainable desktop app.
 
 ---
 
+## v1.2 — Resilience, i18n, and in-app help (Done)
+
+**Goal:** capture crashes in a local log file, translate the UI into
+Greek and English, and add an in-app keyboard-shortcut cheatsheet and
+first-launch tour.
+
+- **Crash reporting (local log file)** — `thingkeeper/logging_config.py`
+  configures a `RotatingFileHandler` (512 KB, 3 backups) at
+  `data/thingkeeper.log` and installs a `sys.excepthook` so unhandled
+  exceptions are captured with a full traceback before the app dies.
+  `setup_logging()` runs at the very top of `app.run()` and
+  `launch.pyw::_setup_logging()`; **Tools → Open log file** opens the
+  log in the OS-default editor. `THINGKEEPER_DEBUG=1` enables debug
+  level. The log file is git-ignored.
+- **Internationalisation (Greek / English locales)** — new
+  `thingkeeper/i18n.py` exposes `tr(text)`, `set_language(code)`,
+  `get_language()`, and `available_languages()`. English is the
+  source language (keys), Greek translations live in the `_EL` dict.
+  The active language is persisted via `QSettings("ui/language")` and
+  restored on next launch. **Settings → Language** dropdown switches
+  between `en` (English) and `el` (Ελληνικά). All menu items, toolbar
+  actions, filter labels, and the Settings/Help dialog strings are
+  wrapped in `tr()`.
+- **In-app help** — new `thingkeeper/ui/help_dialog.py`:
+  - `ShortcutsDialog` — a 2-column table of all keyboard shortcuts
+    (Ctrl+N, Ctrl+E, F1, etc.), bilingual content.
+  - `TourDialog` — an 8-step first-launch tour with Previous/Next
+    navigation and a progress indicator; bilingual content.
+  - **Help → Keyboard shortcuts… (F1)** opens the cheatsheet.
+  - **Help → First-launch tour…** replays the tour on demand.
+
+---
+
 ## Long-term ideas (Later)
 
 - **Installer packages** — MSIX / Inno Setup on Windows, `.dmg` on macOS
-- **Internationalisation** — extract strings, add Greek / English locales
-- **In-app help** — first-launch tour, keyboard shortcut cheatsheet
-- **Crash reporting** — local-only log file the user can share on issue
 - **Camera barcode scan** — use `python-opencv` or `zbar` for live camera decode
 - **QR code labels** — generate printable QR labels per item/location
 - **Multi-user sync** — optional sync to a remote folder (WebDAV / S3)

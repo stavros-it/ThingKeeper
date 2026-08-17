@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/PyQt6-6.6+-41CD52?logo=qt&logoColor=white" alt="PyQt6 6.6+">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey" alt="Platform: Windows | Linux">
-  <img src="https://img.shields.io/badge/Tests-120-brightgreen" alt="Tests: 120">
+  <img src="https://img.shields.io/badge/Tests-140-brightgreen" alt="Tests: 140">
   <img src="https://img.shields.io/badge/License-Proprietary-red" alt="License: Proprietary">
 </p>
 
@@ -57,11 +57,19 @@ single-file storage.
 - **Data integrity check** — `Tools → Data integrity check` detects orphan
   attachments, missing image files, and stale database rows; one-click cleanup.
 - **Settings dialog** — `Tools → Settings` for backup folder, retention count,
-  and auto-backup interval.
+  auto-backup interval, and UI language (English / Greek).
+- **Crash reporting** — unhandled exceptions are captured with a full
+  traceback in `data/thingkeeper.log` (rotating, 512 KB x 3). Open it from
+  `Tools → Open log file` when filing an issue.
+- **Internationalisation** — the UI is bilingual (English / Ελληνικά).
+  Switch in `Settings → Language`; the choice persists across launches.
+- **In-app help** — `Help → Keyboard shortcuts… (F1)` shows a cheatsheet of
+  all shortcuts; `Help → First-launch tour…` replays the onboarding tour.
+  Both are translated.
 - **Dark theme** — polished dark UI with Fusion style, semantic colors, and
   accent highlights; applied unconditionally at startup via `theme.py`.
-- **Test suite** — 120 pytest tests covering database, repository, importers,
-  exporters, backup, integrity, commands, CLI, UI, and theme.
+- **Test suite** — 140 pytest tests covering database, repository, importers,
+  exporters, backup, integrity, commands, CLI, UI, theme, i18n, logging, and help.
 - **CI** — GitHub Actions runs ruff + pytest on every push (Ubuntu + Windows,
   Python 3.10 + 3.12).
 - **Import** — Excel (`.xlsx`), compressed JSON archive (`.tkz`), CSV (`.csv`).
@@ -135,7 +143,7 @@ ThingKeeper/
 ├── pyproject.toml          # packaging + ruff + pytest config
 ├── .github/workflows/
 │   └── ci.yml              # ruff + pytest on Ubuntu + Windows
-├── tests/                  # 120 pytest tests
+├── tests/                  # 140 pytest tests
 └── thingkeeper/
     ├── __init__.py
     ├── __main__.py             # python -m thingkeeper [--report PATH]
@@ -148,6 +156,8 @@ ThingKeeper/
     ├── backup.py               # timestamped backups + rotation + BackupScheduler
     ├── integrity.py            # data integrity check + orphan attachment cleanup
     ├── scanner.py              # serial-scan helper
+    ├── logging_config.py       # RotatingFileHandler + sys.excepthook (crash log)
+    ├── i18n.py                 # tr() + Greek translations + language switcher
     ├── assets/
     │   ├── app.ico             # Windows icon (multi-size)
     │   ├── icon.png            # 512x512 PNG icon
@@ -163,11 +173,12 @@ ThingKeeper/
         ├── contacts_dialog.py       # manage contacts
         ├── dashboard_dialog.py      # charts + summary stats
         ├── report_builder_dialog.py # custom PDF report builder
-        ├── charts.py                # bar chart (pyqtgraph) + pie chart (QPainter)
+        ├── charts.py                # bar chart (QPainter) + pie chart (QPainter)
         ├── scan_dialog.py           # serial scan
         ├── trash_dialog.py          # view / restore / purge deleted items
         ├── integrity_dialog.py      # data integrity check + cleanup UI
-        ├── settings_dialog.py       # backup folder, retention, auto-backup interval
+        ├── settings_dialog.py       # backup folder, retention, auto-backup, language
+        ├── help_dialog.py            # keyboard shortcuts + first-launch tour
         ├── theme.py                 # dark palette + QSS stylesheet + semantic colors
         └── reports_dialog.py        # PDF report
 └── data/                   # runtime data (git-ignored)

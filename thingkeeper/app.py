@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import QApplication
 
 from . import config
 from .database import init_db
+from .logging_config import setup_logging
 from .ui.main_window import MainWindow
 from .ui.theme import apply_theme
 
@@ -29,6 +30,7 @@ def _set_app_user_model_id() -> None:
 
 
 def run() -> int:
+    setup_logging()
     _set_app_user_model_id()
     init_db()
     app = QApplication(sys.argv)
