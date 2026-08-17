@@ -358,6 +358,7 @@ class MainWindow(QMainWindow):
 
         self.act_contacts = QAction(tr("Contacts"), self)
         self.act_contacts.setStatusTip("Manage contacts for loans")
+        self.act_contacts.triggered.connect(self.show_contacts)
         tb.addAction(self.act_contacts)
 
         self.act_report = QAction(tr("Report"), self)
