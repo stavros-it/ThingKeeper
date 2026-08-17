@@ -567,6 +567,8 @@ class MainWindow(QMainWindow):
                         item.setForeground(QColor(DANGER))
                     elif it.status == "IN USE":
                         item.setForeground(QColor(INFO))
+                    elif it.status == "LOANED":
+                        item.setForeground(QColor(WARNING))
                 self.table.setItem(row, col, item)
         if self._first_populate:
             self.table.resizeColumnsToContents()
