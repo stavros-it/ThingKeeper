@@ -356,11 +356,6 @@ class MainWindow(QMainWindow):
         self.act_loan.triggered.connect(self.loan_selected)
         tb.addAction(self.act_loan)
 
-        self.act_loans = QAction(tr("Loans"), self)
-        self.act_loans.setStatusTip("Browse all loans and return items")
-        self.act_loans.triggered.connect(self.show_loans)
-        tb.addAction(self.act_loans)
-
         self.act_contacts = QAction(tr("Contacts"), self)
         self.act_contacts.setStatusTip("Manage contacts for loans")
         tb.addAction(self.act_contacts)
