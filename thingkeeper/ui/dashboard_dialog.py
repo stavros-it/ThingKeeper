@@ -10,7 +10,7 @@ Redesigned to follow the Game DB stats dialog pattern:
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QDialog,
     QFrame,
@@ -28,6 +28,10 @@ from ..repository import (
     all_items,
     counts_by,
     distinct_values,
+    get_item,
+    list_contacts,
+    list_loans,
+    overdue_loan_item_ids,
     qty_by_group,
     total_depreciated_value,
     total_quantity,
@@ -35,7 +39,18 @@ from ..repository import (
     value_by_group,
 )
 from .charts import BarChart, PieChartWidget
-from .theme import ACCENT, BG_BASE, BG_BUTTON, BORDER, INFO, SUCCESS, TEXT, TEXT_DIM
+from .theme import (
+    ACCENT,
+    BG_BASE,
+    BG_BUTTON,
+    BORDER,
+    DANGER,
+    INFO,
+    SUCCESS,
+    TEXT,
+    TEXT_DIM,
+    WARNING,
+)
 
 _GRID_COLUMNS = 2
 
@@ -155,6 +170,9 @@ class DashboardDialog(QDialog):
         items = all_items()
         tval = total_value()
         dval = total_depreciated_value()
+        open_loans = list_loans(open_only=True)
+        overdue = list_loans(open_only=True, overdue_only=True)
+        contacts = list_contacts()
         cards_row = QHBoxLayout()
         cards_row.setSpacing(8)
         cards = [
@@ -163,6 +181,9 @@ class DashboardDialog(QDialog):
             (str(len(distinct_values("group_name"))), "Groups", SUCCESS),
             (f"{tval:,.0f}", "Purchase value", "#fbbf24"),
             (f"{dval:,.0f}", "Depreciated", "#f87171"),
+            (str(len(open_loans)), "Open loans", WARNING),
+            (str(len(overdue)), "Overdue", DANGER),
+            (str(len(contacts)), "Contacts", INFO),
         ]
         for value, label, accent in cards:
             cards_row.addWidget(_metric_card(value, label, accent))
@@ -243,4 +264,71 @@ class DashboardDialog(QDialog):
             chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             sections.append(("Items by brand (top 15)", chart))
 
+        loan_widget = self._build_loan_overview()
+        if loan_widget is not None:
+            sections.append(("Loan overview", loan_widget))
+
         self._place_sections(sections)
+
+    def _build_loan_overview(self) -> QWidget | None:
+        """Smart loan info: open loans with borrower, item label, and due status.
+
+        Returns None when there are no open loans (the section is hidden).
+        """
+        from datetime import date
+
+        from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
+
+        open_loans = list_loans(open_only=True)
+        if not open_loans:
+            return None
+
+        container = QWidget()
+        container.setStyleSheet("background: transparent;")
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        overdue_ids = overdue_loan_item_ids()
+        today_iso = date.today().isoformat()
+
+        table = QTableWidget(len(open_loans), 4)
+        table.setHorizontalHeaderLabels(["Borrower", "Item", "Loaned", "Due"])
+        table.verticalHeader().setVisible(False)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        table.horizontalHeader().setStretchLastSection(False)
+        table.setColumnWidth(0, 160)
+        table.setColumnWidth(1, 280)
+        table.setColumnWidth(2, 110)
+        table.setColumnWidth(3, 140)
+
+        for r, loan in enumerate(open_loans):
+            borrower = loan.borrower or ""
+            item_label = ""
+            it = get_item(loan.item_id) if loan.item_id else None
+            if it:
+                item_label = f"{it.brand} {it.model}".strip() or it.type
+            loaned = loan.loaned_on or ""
+            due = loan.due_on or ""
+            due_text = due
+            if due:
+                if due < today_iso:
+                    days_late = (date.fromisoformat(today_iso) - date.fromisoformat(due)).days
+                    due_text = f"{due} (overdue {days_late}d)"
+                elif due == today_iso:
+                    due_text = f"{due} (today)"
+
+            for c, text in enumerate([borrower, item_label, loaned, due_text]):
+                cell = QTableWidgetItem(text)
+                cell.setFlags(cell.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                if loan.item_id in overdue_ids and c == 3:
+                    cell.setForeground(QColor(DANGER))
+                    f = cell.font()
+                    f.setBold(True)
+                    cell.setFont(f)
+                table.setItem(r, c, cell)
+
+        table.resizeRowsToContents()
+        layout.addWidget(table)
+        return container
