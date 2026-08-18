@@ -459,6 +459,9 @@ class MainWindow(QMainWindow):
     def _build_statusbar(self) -> None:
         sb = QStatusBar()
         self.setStatusBar(sb)
+        self.copyright_label = QLabel("© 2026 Stavros Antoniou")
+        self.copyright_label.setStyleSheet(f"color: {TEXT_DIM};")
+        sb.addWidget(self.copyright_label)
         self.count_label = QLabel("0 items")
         sb.addPermanentWidget(self.count_label)
 
