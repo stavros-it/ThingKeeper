@@ -193,12 +193,24 @@ first-launch tour.
     navigation and a progress indicator; bilingual content.
   - **Help → Keyboard shortcuts… (F1)** opens the cheatsheet.
   - **Help → First-launch tour…** replays the tour on demand.
+- **Cross-platform builds** — `thingkeeper.spec` (PyInstaller) builds a
+  onedir bundle with all assets bundled. `.github/workflows/release.yml`
+  triggers on tag push (`v*`), builds two artifacts in parallel, and
+  attaches them to a GitHub Release:
+  - **Windows portable** — `ThingKeeper-v*.*.*-windows-portable.zip`
+    (PyInstaller onedir, no installer needed, just unzip and run).
+  - **Linux AppImage** — `ThingKeeper-v*.*.*-x86_64.AppImage`
+    (PyInstaller + appimagetool, data stored in
+    `~/.local/share/thingkeeper/` so it persists across updates).
+- **Linux compatibility** — icon loading prefers PNG on non-Windows
+  (`app.ico` on Windows, `icon.png` on Linux/macOS); all Windows API
+  calls (`ctypes.windll`, `os.startfile`) are guarded by
+  `sys.platform == "win32"`; `_open_log` uses `xdg-open` on Linux.
 
 ---
 
 ## Long-term ideas (Later)
 
-- **Installer packages** — MSIX / Inno Setup on Windows, `.dmg` on macOS
 - **Camera barcode scan** — use `python-opencv` or `zbar` for live camera decode
 - **QR code labels** — generate printable QR labels per item/location
 - **Multi-user sync** — optional sync to a remote folder (WebDAV / S3)

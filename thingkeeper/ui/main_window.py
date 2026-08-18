@@ -8,6 +8,7 @@ multi-image support.
 from __future__ import annotations
 
 import json
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -174,7 +175,8 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"{config.APP_NAME} {config.APP_VERSION}")
-        icon_path = Path(__file__).resolve().parent.parent / "assets" / "app.ico"
+        icon_name = "app.ico" if sys.platform == "win32" else "icon.png"
+        icon_path = Path(__file__).resolve().parent.parent / "assets" / icon_name
         if icon_path.is_file():
             self.setWindowIcon(QIcon(str(icon_path)))
         self.resize(1280, 760)

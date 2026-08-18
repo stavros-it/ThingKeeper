@@ -209,7 +209,11 @@ contacts, categories) is planned in v0.3 — see [ROADMAP.md](ROADMAP.md).
 ThingKeeper/
 ├── main.py                      # console entry point
 ├── launch.pyw                   # no-console entry point (Windows, double-click)
+├── thingkeeper.spec             # PyInstaller spec (builds Windows + Linux binaries)
 ├── create_desktop_shortcut.bat  # installs a desktop shortcut with the app icon
+├── packaging/                   # AppImage build assets
+│   ├── thingkeeper.desktop      # Linux .desktop file
+│   └── AppRun                   # AppImage entry point script
 ├── pyproject.toml               # packaging + ruff + pytest config
 ├── requirements.txt             # pinned runtime deps
 ├── README.md                    # user-facing docs
@@ -220,7 +224,8 @@ ThingKeeper/
 ├── .gitignore
 ├── .github/
 │   └── workflows/
-│       └── ci.yml               # ruff + pytest on Ubuntu + Windows, Python 3.10 + 3.12
+│       ├── ci.yml               # ruff + pytest on Ubuntu + Windows, Python 3.10 + 3.12
+│       └── release.yml          # build Windows portable zip + Linux AppImage on tag push
 ├── tests/                       # pytest + pytest-qt test suite (140 tests)
 └── thingkeeper/
     ├── __init__.py              # version

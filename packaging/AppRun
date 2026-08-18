@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# AppRun entry point for the ThingKeeper AppImage.
+# Sets the data directory to a user-writable location so the database
+# and attachments persist across AppImage updates.
+HERE="$(dirname "$(readlink -f "${0}")")"
+export THINGKEEPER_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/thingkeeper"
+mkdir -p "$THINGKEEPER_DATA/attachments"
+exec "${HERE}/usr/bin/ThingKeeper" "$@"

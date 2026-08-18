@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ThingKeeper
+Comment=Desktop inventory app for gadgets, appliances and hardware parts
+Exec=ThingKeeper
+Icon=thingkeeper
+Terminal=false
+Categories=Office;Inventory;
+StartupNotify=true

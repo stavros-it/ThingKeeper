@@ -76,8 +76,24 @@ single-file storage.
 - **Export** — `.tkz` (with attachments), CSV, Excel, PDF report.
 - **Recent files** — recently imported/exported files listed in the File menu.
 - **Reports** — generate PDF inventory summaries (by group, status, expiring warranty).
+- **Cross-platform** — runs on Windows and Linux. Pre-built binaries published
+  on the [Releases page](https://github.com/stavros-it/ThingKeeper/releases):
+  - **Windows portable** — zip, no install needed (unzip and run `ThingKeeper.exe`).
+  - **Linux AppImage** — download, `chmod +x`, and run. Data stored in
+    `~/.local/share/thingkeeper/`.
 
-## Install
+## Download pre-built binaries
+
+Go to the [Releases page](https://github.com/stavros-it/ThingKeeper/releases)
+and download the latest artifact for your platform:
+
+- **Windows**: `ThingKeeper-v*.*.*-windows-portable.zip` — unzip and run
+  `ThingKeeper.exe`. No installation required.
+- **Linux**: `ThingKeeper-v*.*.*-x86_64.AppImage` — make it executable
+  (`chmod +x ThingKeeper-*.AppImage`) and run it. Your inventory is stored in
+  `~/.local/share/thingkeeper/` so it persists across updates.
+
+## Install from source
 
 ```bash
 git clone https://github.com/stavros-it/ThingKeeper.git

@@ -21,6 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "pytest-qt>=4.0", "ruff>=0.4"]
+build = ["pyinstaller>=6.0"]
 
 [project.scripts]
 thingkeeper = "thingkeeper.__main__:run"

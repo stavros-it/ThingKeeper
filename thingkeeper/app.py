@@ -14,7 +14,9 @@ from .logging_config import setup_logging
 from .ui.main_window import MainWindow
 from .ui.theme import apply_theme
 
-_ICON_PATH = Path(__file__).resolve().parent / "assets" / "app.ico"
+_ICON_PATH = Path(__file__).resolve().parent / "assets" / (
+    "app.ico" if sys.platform == "win32" else "icon.png"
+)
 
 
 def _set_app_user_model_id() -> None:
