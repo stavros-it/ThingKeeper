@@ -115,6 +115,7 @@ class ContactsDialog(QDialog):
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().setVisible(False)
+        self.table.itemSelectionChanged.connect(self._update_actions)
         header = self.table.horizontalHeader()
         for i, (_, w) in enumerate(_COLUMNS):
             header.resizeSection(i, w)
@@ -168,6 +169,9 @@ class ContactsDialog(QDialog):
             ]
             for col, value in enumerate(cells):
                 self.table.setItem(row, col, QTableWidgetItem(value))
+        self._update_actions()
+
+    def _update_actions(self) -> None:
         has_sel = bool(self.table.selectionModel().selectedRows())
         self.edit_btn.setEnabled(has_sel)
         self.delete_btn.setEnabled(has_sel)

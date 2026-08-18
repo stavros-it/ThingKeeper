@@ -142,7 +142,12 @@ def maybe_auto_backup() -> Path | None:
                 return None
         except ValueError:
             pass
-    return create_backup()
+    try:
+        return create_backup()
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Auto-backup failed")
+        return None
 
 
 class BackupScheduler(QObject):

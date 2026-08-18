@@ -131,8 +131,10 @@ class DashboardDialog(QDialog):
         outer.setContentsMargins(16, 16, 16, 12)
         outer.setSpacing(12)
 
-        outer.addLayout(self._build_header())
-        outer.addLayout(self._build_metric_cards())
+        self._header_layout = self._build_header()
+        outer.addLayout(self._header_layout)
+        self._cards_layout = self._build_metric_cards()
+        outer.addLayout(self._cards_layout)
         outer.addWidget(self._build_distributions_scroll(), 1)
 
         actions = QHBoxLayout()
@@ -156,37 +158,34 @@ class DashboardDialog(QDialog):
         header.addWidget(title)
         header.addStretch()
 
-        items = all_items()
-        total_lbl = QLabel(f"{len(items):,} items")
+        self._count_label = QLabel("0 items")
         total_font = QFont()
         total_font.setPointSize(12)
         total_font.setBold(True)
-        total_lbl.setFont(total_font)
-        total_lbl.setStyleSheet(f"color: {INFO}; background: transparent;")
-        header.addWidget(total_lbl)
+        self._count_label.setFont(total_font)
+        self._count_label.setStyleSheet(f"color: {INFO}; background: transparent;")
+        header.addWidget(self._count_label)
         return header
 
     def _build_metric_cards(self) -> QHBoxLayout:
-        items = all_items()
-        tval = total_value()
-        dval = total_depreciated_value()
-        open_loans = list_loans(open_only=True)
-        overdue = list_loans(open_only=True, overdue_only=True)
-        contacts = list_contacts()
         cards_row = QHBoxLayout()
         cards_row.setSpacing(8)
-        cards = [
-            (str(len(items)), "Items", ACCENT),
-            (str(total_quantity()), "Total qty", INFO),
-            (str(len(distinct_values("group_name"))), "Groups", SUCCESS),
-            (f"{tval:,.0f}", "Purchase value", "#fbbf24"),
-            (f"{dval:,.0f}", "Depreciated", "#f87171"),
-            (str(len(open_loans)), "Open loans", WARNING),
-            (str(len(overdue)), "Overdue", DANGER),
-            (str(len(contacts)), "Contacts", INFO),
+        self._card_labels: list[tuple[QLabel, str]] = []
+        card_defs = [
+            ("Items", ACCENT),
+            ("Total qty", INFO),
+            ("Groups", SUCCESS),
+            ("Purchase value", WARNING),
+            ("Depreciated", DANGER),
+            ("Open loans", WARNING),
+            ("Overdue", DANGER),
+            ("Contacts", INFO),
         ]
-        for value, label, accent in cards:
-            cards_row.addWidget(_metric_card(value, label, accent))
+        for label_text, accent in card_defs:
+            card = _metric_card("0", label_text, accent)
+            value_lbl = card.findChild(QLabel)
+            cards_row.addWidget(card)
+            self._card_labels.append((value_lbl, label_text))
         cards_row.addStretch()
         return cards_row
 
@@ -202,7 +201,6 @@ class DashboardDialog(QDialog):
         grid.setHorizontalSpacing(12)
         grid.setVerticalSpacing(12)
 
-        self._sections: list[tuple[str, str, bool, str]] = []
         self._scroll_grid = grid
         self._scroll_content = scroll_content
 
@@ -215,7 +213,7 @@ class DashboardDialog(QDialog):
             row = idx // _GRID_COLUMNS
             col = idx % _GRID_COLUMNS
             is_last = idx == len(sections) - 1
-            if is_last and col != 0:
+            if is_last and col == 0:
                 grid.addWidget(_section(title, widget), row, 0, 1, _GRID_COLUMNS)
             else:
                 grid.addWidget(_section(title, widget), row, col)
@@ -225,6 +223,28 @@ class DashboardDialog(QDialog):
             item = self._scroll_grid.itemAt(i)
             if item and item.widget():
                 item.widget().deleteLater()
+
+        items = all_items()
+        tval = total_value()
+        dval = total_depreciated_value()
+        open_loans = list_loans(open_only=True)
+        overdue = list_loans(open_only=True, overdue_only=True)
+        contacts = list_contacts()
+
+        self._count_label.setText(f"{len(items):,} items")
+
+        card_values = {
+            "Items": f"{len(items):,}",
+            "Total qty": str(total_quantity()),
+            "Groups": str(len(distinct_values("group_name"))),
+            "Purchase value": f"{tval:,.0f}",
+            "Depreciated": f"{dval:,.0f}",
+            "Open loans": str(len(open_loans)),
+            "Overdue": str(len(overdue)),
+            "Contacts": str(len(contacts)),
+        }
+        for lbl, key in self._card_labels:
+            lbl.setText(card_values.get(key, "0"))
 
         sections: list[tuple[str, QWidget]] = []
 
@@ -238,7 +258,7 @@ class DashboardDialog(QDialog):
         if sc:
             pie = PieChartWidget()
             pie.set_data(
-                "Status distribution",
+                "",
                 [s for s, _ in sc],
                 [float(v) for _, v in sc],
             )
@@ -260,7 +280,7 @@ class DashboardDialog(QDialog):
         bg = counts_by("brand")
         if bg:
             bg_sorted = sorted(bg, key=lambda x: x[1], reverse=True)[:15]
-            chart = BarChart(bg_sorted, color="#fbbf24")
+            chart = BarChart(bg_sorted, color=WARNING)
             chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             sections.append(("Items by brand (top 15)", chart))
 

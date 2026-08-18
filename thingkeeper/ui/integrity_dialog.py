@@ -45,8 +45,6 @@ class IntegrityDialog(QDialog):
 
         bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         bb.rejected.connect(self.reject)
-        bb.accepted.connect(self.accept)
-        bb.button(QDialogButtonBox.StandardButton.Close).clicked.connect(self.accept)
         v.addWidget(bb)
 
     def _run_check(self) -> None:

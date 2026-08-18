@@ -265,7 +265,7 @@ def export_pdf_report(path: str | Path) -> Path:
     grp_counts = {k: v for k, v in counts_by("group_name")}
     qty_by_group: dict[str, int] = {}
     for it in items:
-        g = it.group_name or "(none)"
+        g = it.group_name.strip() or "(none)"
         qty_by_group[g] = qty_by_group.get(g, 0) + it.quantity
     for g in sorted(qty_by_group):
         grp_rows.append([g, str(grp_counts.get(g, 0)), str(qty_by_group[g])])
@@ -342,13 +342,15 @@ def export_archive_encrypted(path: str | Path, passphrase: str) -> Path:
         raise ValueError("Passphrase is required for encrypted archive")
     path = Path(path)
     plain = export_archive(path.with_suffix(".tkz.tmp"))
-    key = _derive_key(passphrase)
-    with open(plain, "rb") as f:
-        data = f.read()
-    token = Fernet(key).encrypt(data)
-    with open(path, "wb") as f:
-        f.write(_ENC_MAGIC + token)
-    plain.unlink(missing_ok=True)
+    try:
+        key = _derive_key(passphrase)
+        with open(plain, "rb") as f:
+            data = f.read()
+        token = Fernet(key).encrypt(data)
+        with open(path, "wb") as f:
+            f.write(_ENC_MAGIC + token)
+    finally:
+        plain.unlink(missing_ok=True)
     return path
 
 

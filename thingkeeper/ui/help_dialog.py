@@ -77,10 +77,7 @@ class ShortcutsDialog(QDialog):
         from ..i18n import get_language
         rows = _SHORTCUTS_EL if get_language() == "el" else _SHORTCUTS_EN
         table = QTableWidget(len(rows), 2)
-        table.setHorizontalHeaderLabels(
-            [tr("Action"), tr("Shortcut")] if get_language() == "en"
-            else ["Ενέργεια", "Συντόμευση"]
-        )
+        table.setHorizontalHeaderLabels([tr("Action"), tr("Shortcut")])
         table.verticalHeader().setVisible(False)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
@@ -122,7 +119,7 @@ _TOUR_STEPS_EN: list[tuple[str, str]] = [
      "Mark items as 'LOANED' and track who has them. Use the Loans "
      "menu to manage loans and contacts."),
     ("Dashboard and reports",
-     "Open the Dashboard (Ctrl+D from View menu, or the toolbar) to see "
+     "Open the Dashboard from the toolbar (or File > Dashboard) to see "
      "charts of your inventory. Generate PDF reports from File > Generate report."),
     ("Backups and settings",
      "ThingKeeper auto-backs up to a local folder. Configure backup "
@@ -155,8 +152,8 @@ _TOUR_STEPS_EL: list[tuple[str, str]] = [
      "Μαρκάρετε αντικείμενα ως 'LOANED' και παρακολουθήστε ποια τα έχει. "
      "Χρησιμοποιήστε το μενού Δανεισμός για διαχείριση δανεισμών και επαφών."),
     ("Πίνακας ελέγχου και αναφορές",
-     "Ανοίξτε τον Πίνακα ελέγχου (Ctrl+D από το μενού Προβολή, ή τη "
-     "γραμμή εργαλείων) για να δείτε διαγράμματα του αποθέματός σας. "
+     "Ανοίξτε τον Πίνακα ελέγχου από τη γραμμή εργαλείων (ή Αρχείο > "
+     "Πίνακας ελέγχου) για να δείτε διαγράμματα του αποθέματός σας. "
      "Δημιουργήστε αναφορές PDF από Αρχείο > Δημιουργία αναφοράς."),
     ("Αντίγραφα και ρυθμίσεις",
      "Το ThingKeeper δημιουργεί αυτόματα αντίγραφα ασφαλείας σε τοπικό "
@@ -228,8 +225,7 @@ class TourDialog(QDialog):
         self.next_btn.setVisible(not is_last)
         self.finish_btn.setVisible(is_last)
         if is_last:
-            from ..i18n import get_language
-            self.finish_btn.setText(tr("Finish") if get_language() == "en" else "Τέλος")
+            self.finish_btn.setText(tr("Finish"))
 
     def _prev(self) -> None:
         if self._index > 0:

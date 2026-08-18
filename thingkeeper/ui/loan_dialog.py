@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..i18n import tr
 from ..repository import Item, list_contacts
 
 
@@ -101,7 +102,16 @@ class LoanDialog(QDialog):
     def _validate_and_accept(self) -> None:
         if not self.borrower_edit.text().strip():
             from PyQt6.QtWidgets import QMessageBox
-            QMessageBox.warning(self, "Validation", "Please provide a borrower name.")
+            QMessageBox.warning(
+                self, tr("Validation"), tr("Please provide a borrower name."),
+            )
+            return
+        if self.due_edit.date() < self.loaned_edit.date():
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self, tr("Validation"),
+                tr("Due date cannot be before the loaned date."),
+            )
             return
         self.accept()
 

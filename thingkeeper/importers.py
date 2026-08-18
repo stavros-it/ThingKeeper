@@ -119,7 +119,7 @@ def _record_to_item(record: dict) -> Item:
 
     def _int(val, default=1) -> int:
         try:
-            return int(val) if val not in (None, "") else default
+            return int(float(val)) if val not in (None, "") else default
         except (ValueError, TypeError):
             return default
 
@@ -128,24 +128,24 @@ def _record_to_item(record: dict) -> Item:
 
     return Item(
         id=item_id,
-        group_name=str(record.get("group_name", "")),
-        type=str(record.get("type", "")),
-        brand=str(record.get("brand", "")),
-        model=str(record.get("model", "")),
-        info=str(record.get("info", "")),
-        serial=str(record.get("serial", "")),
-        store=str(record.get("store", "")),
-        purchase_date=to_iso(record.get("purchase_date", "")),
-        status=str(record.get("status", config.DEFAULT_STATUS)).upper()
+        group_name=str(record.get("group_name") or ""),
+        type=str(record.get("type") or ""),
+        brand=str(record.get("brand") or ""),
+        model=str(record.get("model") or ""),
+        info=str(record.get("info") or ""),
+        serial=str(record.get("serial") or ""),
+        store=str(record.get("store") or ""),
+        purchase_date=to_iso(record.get("purchase_date") or ""),
+        status=str(record.get("status") or config.DEFAULT_STATUS).upper()
         or config.DEFAULT_STATUS,
         quantity=_int(record.get("quantity", 1), 1),
-        location=str(record.get("location", "")),
-        warranty_end=to_iso(record.get("warranty_end", "")),
+        location=str(record.get("location") or ""),
+        warranty_end=to_iso(record.get("warranty_end") or ""),
         image_path="",  # attachments restored separately
         unit_price=_float(record.get("unit_price", 0.0)),
         depreciation_years=_float(record.get("depreciation_years", 0.0)),
-        created_at=str(record.get("created_at", "") or ""),
-        updated_at=str(record.get("updated_at", "") or ""),
+        created_at=str(record.get("created_at") or ""),
+        updated_at=str(record.get("updated_at") or ""),
     )
 
 
@@ -182,9 +182,12 @@ def import_archive(path: str | Path) -> ImportResult:
             contact_records = data.get("contacts", [])
 
         items = []
+        paired: list[tuple[dict, Item]] = []
         for i, record in enumerate(item_records, start=1):
             try:
-                items.append(_record_to_item(record))
+                item = _record_to_item(record)
+                items.append(item)
+                paired.append((record, item))
             except Exception as exc:  # pragma: no cover - defensive
                 errors.append(f"Item {i}: {exc}")
 
@@ -201,7 +204,7 @@ def import_archive(path: str | Path) -> ImportResult:
             Path(n).name for n in names if n.startswith("attachments/")
         }
         extra_to_restore: list[tuple[int, list[str]]] = []
-        for idx, (record, item) in enumerate(zip(item_records, items)):
+        for idx, (record, item) in enumerate(paired):
             img = record.get("image_path") or ""
             if img:
                 base = Path(img).name

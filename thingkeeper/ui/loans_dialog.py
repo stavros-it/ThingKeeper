@@ -63,6 +63,7 @@ class LoansDialog(QDialog):
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().setVisible(False)
+        self.table.itemSelectionChanged.connect(self._update_actions)
         header = self.table.horizontalHeader()
         for i, (_, w) in enumerate(_COLUMNS):
             header.resizeSection(i, w)
@@ -131,7 +132,8 @@ class LoansDialog(QDialog):
             loan_id = self._selected_loan_id()
             if loan_id is not None:
                 from ..repository import get_loan
-                enabled = get_loan(loan_id).is_open if get_loan(loan_id) else False
+                loan = get_loan(loan_id)
+                enabled = loan.is_open if loan else False
         self.return_btn.setEnabled(enabled)
 
     def _selected_loan_id(self) -> int | None:

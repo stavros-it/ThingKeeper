@@ -38,6 +38,13 @@ INFO = "#60a5fa"
 INFO_BG = "#1a2845"
 MUTED = "#9a9a9a"
 
+# Scrollbar handle colors (brightened for visibility on dark background).
+SCROLLBAR_HANDLE = "#5a5a5a"
+SCROLLBAR_HANDLE_HOVER = "#707070"
+
+# Link colors.
+LINK_VISITED = "#a78bfa"
+
 # Status colors tuned for dark backgrounds.
 STATUS_COLORS = {
     "AVAILABLE": SUCCESS,
@@ -191,13 +198,13 @@ QAbstractScrollArea QScrollBar:horizontal {{
     border-top: 1px solid {BORDER};
 }}
 QScrollBar::handle {{
-    background: #5a5a5a;
+    background: {SCROLLBAR_HANDLE};
     border: 2px solid {BG_BASE};
     border-radius: 4px;
     min-height: 24px;
     min-width: 24px;
 }}
-QScrollBar::handle:hover {{ background: #707070; }}
+QScrollBar::handle:hover {{ background: {SCROLLBAR_HANDLE_HOVER}; }}
 QScrollBar::handle:pressed {{ background: {ACCENT}; }}
 QScrollBar::sub-line, QScrollBar::add-line {{
     border: none; background: none; height: 0; width: 0;
@@ -446,7 +453,7 @@ def dark_palette() -> QPalette:
     p.setColor(QPalette.ColorRole.ToolTipBase, QColor(BG_BASE))
     p.setColor(QPalette.ColorRole.ToolTipText, QColor(TEXT))
     p.setColor(QPalette.ColorRole.Link, QColor(ACCENT_HOVER))
-    p.setColor(QPalette.ColorRole.LinkVisited, QColor("#a78bfa"))
+    p.setColor(QPalette.ColorRole.LinkVisited, QColor(LINK_VISITED))
 
     # Disabled state.
     disabled_text = QColor(TEXT_DIM)

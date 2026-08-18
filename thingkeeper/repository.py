@@ -86,6 +86,7 @@ class Item:
             "image_path": self.image_path,
             "unit_price": self.unit_price,
             "depreciation_years": self.depreciation_years,
+            "deleted_at": self.deleted_at,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
@@ -275,7 +276,8 @@ def find_by_serial(serial: str) -> Item | None:
     with connect() as conn:
         row = conn.execute(
             "SELECT * FROM items "
-            "WHERE LOWER(TRIM(serial)) = LOWER(?) AND deleted_at IS NULL LIMIT 1",
+            "WHERE LOWER(TRIM(serial)) = LOWER(?) AND deleted_at IS NULL "
+            "ORDER BY id LIMIT 1",
             (s,),
         ).fetchone()
     return Item.from_row(row) if row else None
@@ -388,8 +390,9 @@ def warranty_expired() -> list[Item]:
     today = date.today().isoformat()
     with connect() as conn:
         rows = conn.execute(
-            "SELECT * FROM items WHERE deleted_at IS NULL AND warranty_end < ? "
-            "ORDER BY warranty_end",
+            "SELECT * FROM items WHERE deleted_at IS NULL "
+            "AND warranty_end IS NOT NULL AND TRIM(warranty_end) <> '' "
+            "AND warranty_end < ? ORDER BY warranty_end",
             (today,),
         ).fetchall()
     return [Item.from_row(r) for r in rows]
@@ -417,10 +420,10 @@ def value_by_group() -> list[tuple[str, float]]:
     """Total value per group, sorted by value descending."""
     with connect() as conn:
         rows = conn.execute(
-            "SELECT COALESCE(group_name,'(none)') AS g, "
+            "SELECT COALESCE(NULLIF(TRIM(group_name),''), '(none)') AS g, "
             "COALESCE(SUM(quantity * COALESCE(unit_price,0)),0) AS v "
             "FROM items WHERE deleted_at IS NULL "
-            "GROUP BY group_name ORDER BY v DESC"
+            "GROUP BY g ORDER BY v DESC"
         ).fetchall()
     return [(r["g"], float(r["v"])) for r in rows]
 
@@ -429,10 +432,10 @@ def qty_by_group() -> list[tuple[str, int]]:
     """Total quantity per group, sorted by quantity descending."""
     with connect() as conn:
         rows = conn.execute(
-            "SELECT COALESCE(group_name,'(none)') AS g, "
+            "SELECT COALESCE(NULLIF(TRIM(group_name),''), '(none)') AS g, "
             "COALESCE(SUM(quantity),0) AS q "
             "FROM items WHERE deleted_at IS NULL "
-            "GROUP BY group_name ORDER BY q DESC"
+            "GROUP BY g ORDER BY q DESC"
         ).fetchall()
     return [(r["g"], int(r["q"])) for r in rows]
 
@@ -451,7 +454,7 @@ def estimate_depreciation(item: Item) -> float:
     except ValueError:
         return item.unit_price
     age_days = (date.today() - purchased).days
-    age_years = age_days / 365.25
+    age_years = max(0.0, age_days / 365.25)
     if age_years >= item.depreciation_years:
         return 0.0
     remaining = 1.0 - (age_years / item.depreciation_years)
@@ -602,6 +605,8 @@ class Contact:
             "phone": self.phone,
             "email": self.email,
             "notes": self.notes,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
         }
 
 
@@ -701,6 +706,8 @@ class Loan:
             "due_on": self.due_on,
             "returned_on": self.returned_on,
             "notes": self.notes,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
         }
 
     @property
@@ -711,7 +718,7 @@ class Loan:
     def is_overdue(self) -> bool:
         if not self.is_open or not self.due_on:
             return False
-        return self.due_on < date.today().isoformat()
+        return to_iso(self.due_on) < date.today().isoformat()
 
 
 def open_loan(
@@ -725,10 +732,14 @@ def open_loan(
 
     Saves the item's previous status so it can be restored on return.
     """
+    if not borrower or not borrower.strip():
+        raise ValueError("borrower is required")
     today = date.today().isoformat()
     item = get_item(item_id)
     if item is None:
         raise ValueError(f"Item {item_id} not found")
+    if active_loan_for_item(item_id) is not None:
+        raise ValueError(f"Item {item_id} is already on loan")
     prev_status = item.status
     with connect() as conn:
         cur = conn.execute(
@@ -788,15 +799,13 @@ def returned_note(extra: str) -> str:
 
 def extract_previous_status(info: str) -> str:
     """Pull the previous status marker out of an item's info field."""
-    import re
-    m = re.search(r"\[Previous status:\s*([A-Z ]+)\]", info)
+    m = re.search(r"\[Previous status:\s*([^\]]+)\]", info)
     return m.group(1).strip() if m else ""
 
 
 def strip_previous_status(info: str) -> str:
     """Remove the previous-status marker line from an item's info field."""
-    import re
-    cleaned = re.sub(r"\n?\[Previous status:\s*[A-Z ]+\]", "", info)
+    cleaned = re.sub(r"\n?\[Previous status:\s*[^\]]+\]", "", info)
     return cleaned.strip()
 
 
@@ -868,5 +877,24 @@ def on_loan_item_ids() -> set[int]:
 
 def delete_loan(loan_id: int) -> None:
     with connect() as conn:
+        loan_row = conn.execute(
+            "SELECT * FROM loans WHERE id=?", (loan_id,)
+        ).fetchone()
+        if loan_row is None:
+            return
+        if not loan_row["returned_on"]:
+            item = conn.execute(
+                "SELECT * FROM items WHERE id=?", (loan_row["item_id"],)
+            ).fetchone()
+            if item is not None:
+                new_status = extract_previous_status(item["info"] or "")
+                if not new_status:
+                    new_status = "AVAILABLE"
+                new_info = strip_previous_status(item["info"] or "")
+                conn.execute(
+                    "UPDATE items SET status=?, info=?, updated_at=datetime('now') "
+                    "WHERE id=?",
+                    (new_status, new_info, item["id"]),
+                )
         conn.execute("DELETE FROM loans WHERE id=?", (loan_id,))
         conn.commit()

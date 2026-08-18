@@ -30,10 +30,13 @@ def _redirect_streams() -> Path:
     """Redirect stdout/stderr to a log file when running under pythonw.exe.
 
     Under ``pythonw.exe`` both streams are ``None``; writing to them raises
-    "Bad file descriptor". We point them at a log file so tracebacks survive.
-    When launched from a terminal (``python.exe``), the real streams are kept.
+    "Bad file descriptor". We point them at the same log file used by the
+    RotatingFileHandler so diagnostics end up in one place.
     """
-    log_path = _HERE / "thingkeeper.log"
+    from thingkeeper.logging_config import LOG_FILE
+    if sys.stdout is not None and sys.stderr is not None:
+        return LOG_FILE
+    log_path = LOG_FILE
     try:
         stream = log_path.open("a", encoding="utf-8")
     except OSError:

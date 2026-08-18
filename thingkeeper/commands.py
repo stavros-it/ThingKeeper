@@ -88,6 +88,8 @@ class BulkUpdateCommand(Command):
         old_values: list[dict],
         new_fields: dict,
     ) -> None:
+        if len(item_ids) != len(old_values):
+            raise ValueError("item_ids and old_values must have the same length")
         self._ids = item_ids
         self._old = old_values
         self._new = new_fields

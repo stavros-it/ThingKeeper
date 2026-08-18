@@ -86,6 +86,7 @@ _EL: dict[str, str] = {
     "Loans": "Δανεισμοί",
     "Contacts": "Επαφές",
     "Scan": "Σάρωση",
+    "Trash": "Κάδος",
     "Refresh": "Ανανέωση",
     "Dashboard": "Πίνακας",
     "Report": "Αναφορά",
@@ -106,6 +107,7 @@ _EL: dict[str, str] = {
     "Save": "Αποθήκευση",
     "Apply": "Εφαρμογή",
     "Close": "Κλείσιμο",
+    "Off": "Ανενεργό",
 
     # --- Common ---
     "Settings": "Ρυθμίσεις",
@@ -116,6 +118,11 @@ _EL: dict[str, str] = {
     "Language:": "Γλώσσα:",
     "English": "Αγγλικά",
     "Greek": "Ελληνικά",
+    "Backup folder cannot be empty.": "Ο φάκελος αντιγράφων δεν μπορεί να είναι κενός.",
+    "Validation": "Επαλήθευση",
+    "Please provide a borrower name.": "Παρακαλώ δώστε όνομα δανειζόμενου.",
+    "Due date cannot be before the loaned date.":
+        "Η ημερομηνία επιστροφής δεν μπορεί να είναι πριν τη ημερομηνία δανεισμού.",
 }
 
 _TRANSLATIONS["el"] = _EL
@@ -145,7 +152,9 @@ def _save_lang(lang: str) -> None:
 def set_language(lang: str) -> None:
     """Set the active language ('en' or 'el').  Persisted via QSettings."""
     global _LANG
-    _LANG = lang if lang in ("en", "el") else "en"
+    if lang not in ("en", "el"):
+        lang = "en"
+    _LANG = lang
     _save_lang(_LANG)
 
 

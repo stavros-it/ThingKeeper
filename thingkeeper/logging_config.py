@@ -36,32 +36,36 @@ def setup_logging() -> None:
     global _installed
     if _installed:
         return
-    _installed = True
 
     level = logging.DEBUG if _debug_env() else logging.INFO
 
-    handler = RotatingFileHandler(
-        LOG_FILE,
-        maxBytes=512 * 1024,
-        backupCount=3,
-        encoding="utf-8",
-    )
-    handler.setFormatter(logging.Formatter(_LOG_FORMAT, _DATE_FORMAT))
+    try:
+        handler = RotatingFileHandler(
+            LOG_FILE,
+            maxBytes=512 * 1024,
+            backupCount=3,
+            encoding="utf-8",
+        )
+        handler.setFormatter(logging.Formatter(_LOG_FORMAT, _DATE_FORMAT))
 
-    root = logging.getLogger()
-    root.setLevel(level)
-    root.addHandler(handler)
+        root = logging.getLogger()
+        root.setLevel(level)
+        root.addHandler(handler)
 
-    if sys.stderr is not None:
-        console = logging.StreamHandler(sys.stderr)
-        console.setFormatter(logging.Formatter(_LOG_FORMAT, _DATE_FORMAT))
-        root.addHandler(console)
+        if sys.stderr is not None:
+            console = logging.StreamHandler(sys.stderr)
+            console.setFormatter(logging.Formatter(_LOG_FORMAT, _DATE_FORMAT))
+            root.addHandler(console)
 
-    sys.excepthook = _excepthook
+        sys.excepthook = _excepthook
+        _installed = True
 
-    logging.getLogger(__name__).info(
-        "ThingKeeper %s starting (log: %s)", config.APP_VERSION, LOG_FILE,
-    )
+        logging.getLogger(__name__).info(
+            "ThingKeeper %s starting (log: %s)", config.APP_VERSION, LOG_FILE,
+        )
+    except Exception:
+        _installed = False
+        raise
 
 
 def _debug_env() -> bool:
@@ -73,11 +77,7 @@ def _excepthook(exc_type, exc_value, exc_tb) -> None:
     """Log unhandled exceptions before delegating to the default hook."""
     log = logging.getLogger("thingkeeper.crash")
     log.critical(
-        "Unhandled exception: %s: %s",
-        exc_type.__name__,
-        exc_value,
+        "Unhandled exception:\n%s",
+        "".join(traceback.format_exception(exc_type, exc_value, exc_tb)),
     )
-    if exc_tb is not None:
-        log.critical("Traceback:\n%s", "".join(traceback.format_tb(exc_tb)))
-
     sys.__excepthook__(exc_type, exc_value, exc_tb)

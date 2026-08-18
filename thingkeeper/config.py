@@ -10,7 +10,7 @@ APP_DIR = Path(__file__).resolve().parent
 ROOT_DIR = APP_DIR.parent
 
 # Runtime data lives in ./data — git-ignored so user inventory stays local.
-DATA_DIR = Path(os.environ.get("THINGKEEPER_DATA", ROOT_DIR / "data"))
+DATA_DIR = Path(os.environ.get("THINGKEEPER_DATA") or ROOT_DIR / "data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH = DATA_DIR / "thingkeeper.db"
