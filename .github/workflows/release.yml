@@ -68,7 +68,9 @@ jobs:
             libxcb-shape0 \
             libxcb-sync1 \
             libxcb-xfixes0 \
-            libxcb-xkb1
+            libxcb-xkb1 \
+            libfuse2 \
+            file
 
       - name: Install Python dependencies
         run: |
@@ -84,13 +86,14 @@ jobs:
           # Create AppDir structure
           mkdir -p AppDir/usr/bin
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-          mkdir -p AppDir/usr/lib
 
-          # Copy PyInstaller output
+          # Copy PyInstaller output (onedir: binary + _internal/ folder)
           cp -r dist/ThingKeeper/* AppDir/usr/bin/
+          chmod +x AppDir/usr/bin/ThingKeeper
 
           # Copy icon
           cp thingkeeper/assets/icon-256.png AppDir/usr/share/icons/hicolor/256x256/apps/thingkeeper.png
+          cp thingkeeper/assets/icon-256.png AppDir/thingkeeper.png
 
           # Copy .desktop file
           cp packaging/thingkeeper.desktop AppDir/thingkeeper.desktop
@@ -103,8 +106,8 @@ jobs:
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
 
-          # Build AppImage
-          ARCH=x86_64 ./appimagetool-x86_64.AppImage AppDir ThingKeeper-x86_64.AppImage
+          # Build AppImage (extract-and-run because FUSE may not work in CI)
+          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool-x86_64.AppImage AppDir ThingKeeper-x86_64.AppImage
 
       - name: Rename with tag
         run: |
