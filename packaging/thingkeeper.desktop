@@ -5,5 +5,5 @@ Comment=Desktop inventory app for gadgets, appliances and hardware parts
 Exec=ThingKeeper
 Icon=thingkeeper
 Terminal=false
-Categories=Office;Inventory;
+Categories=Office;Database;
 StartupNotify=true
