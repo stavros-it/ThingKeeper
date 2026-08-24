@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
 
 from .. import config
 from ..repository import Item, distinct_values, list_images
+from .date_fmt import qt_date_format
 
 _IMAGE_FILTERS = "Images (*.png *.jpg *.jpeg *.bmp *.webp *.gif);;All files (*.*)"
 
@@ -86,13 +87,13 @@ class ItemDialog(QDialog):
 
         self.purchase_edit = QDateEdit()
         self.purchase_edit.setCalendarPopup(True)
-        self.purchase_edit.setDisplayFormat("yyyy-MM-dd")
+        self.purchase_edit.setDisplayFormat(qt_date_format())
         self.purchase_edit.setDate(date.today())
         self.purchase_edit.dateChanged.connect(self._on_purchase_changed)
 
         self.warranty_edit = QDateEdit()
         self.warranty_edit.setCalendarPopup(True)
-        self.warranty_edit.setDisplayFormat("yyyy-MM-dd")
+        self.warranty_edit.setDisplayFormat(qt_date_format())
         self.warranty_edit.setDate(date.today())
         self.warranty_check = QCheckBox("Has warranty")
         self.warranty_check.toggled.connect(self._on_warranty_toggled)

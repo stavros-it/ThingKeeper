@@ -114,14 +114,9 @@ _SETTINGS_SORT = "table/sort"
 
 
 def _fmt_date(iso: str) -> str:
-    """Convert an ISO date (YYYY-MM-DD) to DD-MM-YYYY for display."""
-    if not iso or len(iso) < 10:
-        return iso
-    try:
-        y, m, d = iso[:10].split("-")
-        return f"{d}-{m}-{y}"
-    except ValueError:
-        return iso
+    """Render an ISO date (YYYY-MM-DD) using the host OS regional format."""
+    from .date_fmt import format_iso_date
+    return format_iso_date(iso)
 
 
 def _days_until(iso: str) -> int | None:

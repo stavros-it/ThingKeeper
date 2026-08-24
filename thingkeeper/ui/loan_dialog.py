@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 
 from ..i18n import tr
 from ..repository import Item, list_contacts
+from .date_fmt import qt_date_format
 
 
 class LoanDialog(QDialog):
@@ -52,13 +53,13 @@ class LoanDialog(QDialog):
 
         self.loaned_edit = QDateEdit()
         self.loaned_edit.setCalendarPopup(True)
-        self.loaned_edit.setDisplayFormat("yyyy-MM-dd")
+        self.loaned_edit.setDisplayFormat(qt_date_format())
         self.loaned_edit.setDate(date.today())
         self.loaned_edit.setEnabled(False)  # always today
 
         self.due_edit = QDateEdit()
         self.due_edit.setCalendarPopup(True)
-        self.due_edit.setDisplayFormat("yyyy-MM-dd")
+        self.due_edit.setDisplayFormat(qt_date_format())
         self.due_edit.setDate(date.today() + timedelta(days=14))
 
         self.notes_edit = QTextEdit()

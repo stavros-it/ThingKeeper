@@ -264,6 +264,7 @@ ThingKeeper/
         ├── settings_dialog.py   # backup folder, retention, auto-backup interval, language
         ├── help_dialog.py        # keyboard shortcut cheatsheet + first-launch tour
         ├── theme.py             # dark palette + QSS stylesheet + semantic colors
+        ├── date_fmt.py          # OS regional date format helpers (QLocale.system())
         └── reports_dialog.py    # PDF report dialog
 ```
 
@@ -377,12 +378,14 @@ the warranty is not yet enabled, or the warranty date still equals the
 previous purchase date (i.e. the user hasn't customised it yet). A
 manually-set warranty date is always preserved.
 
-### 6.8 Dates are displayed as DD-MM-YYYY, stored as ISO
+### 6.8 Dates are displayed with the OS regional format, stored as ISO
 
 SQLite stores dates as ISO `YYYY-MM-DD` text (sortable, portable). The
-items table renders them as `DD-MM-YYYY` via the `_fmt_date()` helper
-in `main_window.py`. The item dialog still uses `QDateEdit` with
-`yyyy-MM-dd` display format; only the table view is reformatted.
+items table renders them via the `_fmt_date()` helper in
+`main_window.py`, which delegates to `thingkeeper/ui/date_fmt.py` and
+`QLocale.system()`'s short date format. The item dialog and loan dialog
+`QDateEdit` widgets use the same regional format via
+`qt_date_format()`. Storage is always ISO — only display is localised.
 
 ### 6.9 Table layout persists across launches
 
@@ -544,6 +547,7 @@ This is the pattern used by the smoke tests run during the initial build.
 | Add a keyboard shortcut                 | the relevant `QAction.setShortcut()` in `main_window.py` |
 | Add a new report                        | `exporters.export_pdf_report()` or a sibling function + `reports_dialog.py` |
 | Change warranty display logic           | `_warranty_status()` + `_fmt_date()` in `main_window.py` |
+| Change date display format              | `thingkeeper/ui/date_fmt.py` (single source for `QLocale.system()`) |
 | Change table column persistence        | `_save_column_state()` + `_restore_column_state()` in `main_window.py` |
 | Add a new translation                   | add the English key + Greek value to `_EL` in `i18n.py`, then wrap the source string with `tr()` at the call site |
 | Add a new language                      | add a `_XX` dict and a branch in `tr()` in `i18n.py`, plus the entry in `available_languages()` |
