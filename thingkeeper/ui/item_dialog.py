@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QTextEdit,
     QVBoxLayout,
@@ -208,6 +209,13 @@ class ItemDialog(QDialog):
         form.addRow("Images:", images_widget)
         form.addRow("Receipt / Invoice:", receipt_widget)
 
+        form_widget = QWidget()
+        form_widget.setLayout(form)
+        scroll = QScrollArea()
+        scroll.setWidget(form_widget)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
@@ -215,7 +223,7 @@ class ItemDialog(QDialog):
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout(self)
-        layout.addLayout(form)
+        layout.addWidget(scroll, 1)
         layout.addWidget(buttons)
 
     def _combo_edit(self, column: str) -> QComboBox:
