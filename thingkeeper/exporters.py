@@ -17,6 +17,7 @@ from .repository import (
     list_contacts,
     list_images,
     list_loans,
+    list_receipts,
     total_depreciated_value,
     total_quantity,
     total_value,
@@ -80,6 +81,15 @@ def export_archive(path: str | Path, items: list[Item] | None = None) -> Path:
                 if p.exists():
                     attach_seen.add(str(p))
         rec["extra_images"] = extra
+        # Include receipts / invoices (kind='receipt').
+        receipts = []
+        if it.id is not None:
+            for _r_id, r_path in list_receipts(it.id):
+                p = Path(r_path)
+                receipts.append(p.name)
+                if p.exists():
+                    attach_seen.add(str(p))
+        rec["extra_receipts"] = receipts
         records.append(rec)
 
     # Build a quick item-id -> serial lookup so loans can be re-mapped on import.

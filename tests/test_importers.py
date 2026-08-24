@@ -18,7 +18,14 @@ from thingkeeper.importers import (
     import_csv,
     import_excel,
 )
-from thingkeeper.repository import create_item, hard_delete, list_items
+from thingkeeper.repository import (
+    add_image,
+    create_item,
+    hard_delete,
+    list_images,
+    list_items,
+    list_receipts,
+)
 
 
 def _write_csv(path: Path, rows: list[list[str]]) -> None:
@@ -162,3 +169,29 @@ def test_is_encrypted_archive_detects_plain(repo, sample_item, tmp_path):
 def test_import_archive_missing_file(repo, tmp_path):
     with pytest.raises(FileNotFoundError):
         import_archive(tmp_path / "does_not_exist.tkz")
+
+
+def test_archive_round_trip_preserves_receipts(repo, sample_item, tmp_path):
+    """Receipts (kind='receipt') and images must survive a .tkz export/import."""
+    iid = create_item(sample_item(serial="RCP-ARC-1"))
+    img_path = tmp_path / "sample.png"
+    img_path.write_bytes(b"\x89PNG\r\n\x1a\n fake png")
+    rcp_path = tmp_path / "invoice.pdf"
+    rcp_path.write_bytes(b"%PDF-1.4 fake invoice")
+    add_image(iid, str(img_path), kind="image")
+    add_image(iid, str(rcp_path), kind="receipt")
+    assert len(list_images(iid)) == 1
+    assert len(list_receipts(iid)) == 1
+
+    archive_path = tmp_path / "receipts.tkz"
+    export_archive(archive_path)
+
+    for it in list_items():
+        hard_delete(it.id)
+    assert len(list_items()) == 0
+
+    result = import_archive(archive_path)
+    assert result.imported == 1
+    restored = list_items()[0]
+    assert len(list_images(restored.id)) == 1
+    assert len(list_receipts(restored.id)) == 1

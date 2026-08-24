@@ -520,11 +520,11 @@ def bulk_insert(items: Iterable[Item]) -> int:
 
 # ---------------------------------------------------------------- multi-image
 
-def add_image(item_id: int, path: str) -> int:
+def add_image(item_id: int, path: str, kind: str = "image") -> int:
     with connect() as conn:
         cur = conn.execute(
-            "INSERT INTO item_images (item_id, path) VALUES (?, ?)",
-            (item_id, path),
+            "INSERT INTO item_images (item_id, path, kind) VALUES (?, ?, ?)",
+            (item_id, path, kind),
         )
         conn.commit()
         return int(cur.lastrowid)
@@ -537,22 +537,56 @@ def remove_image(image_id: int) -> None:
 
 
 def list_images(item_id: int) -> list[tuple[int, str]]:
-    """Return (image_id, path) pairs for an item."""
+    """Return (image_id, path) pairs for an item (kind='image' only)."""
     with connect() as conn:
         rows = conn.execute(
-            "SELECT id, path FROM item_images WHERE item_id=? ORDER BY id",
+            "SELECT id, path FROM item_images WHERE item_id=? AND kind='image' ORDER BY id",
+            (item_id,),
+        ).fetchall()
+    return [(r["id"], r["path"]) for r in rows]
+
+
+def list_receipts(item_id: int) -> list[tuple[int, str]]:
+    """Return (receipt_id, path) pairs for an item (kind='receipt')."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT id, path FROM item_images WHERE item_id=? AND kind='receipt' ORDER BY id",
             (item_id,),
         ).fetchall()
     return [(r["id"], r["path"]) for r in rows]
 
 
 def set_images(item_id: int, paths: list[str]) -> None:
-    """Replace the full set of images for an item."""
+    """Replace the full set of images (kind='image') for an item.
+
+    Receipts (kind='receipt') are preserved.
+    """
     with connect() as conn:
-        conn.execute("DELETE FROM item_images WHERE item_id=?", (item_id,))
+        conn.execute(
+            "DELETE FROM item_images WHERE item_id=? AND kind='image'",
+            (item_id,),
+        )
         for p in paths:
             conn.execute(
-                "INSERT INTO item_images (item_id, path) VALUES (?, ?)",
+                "INSERT INTO item_images (item_id, path, kind) VALUES (?, ?, 'image')",
+                (item_id, p),
+            )
+        conn.commit()
+
+
+def set_receipts(item_id: int, paths: list[str]) -> None:
+    """Replace the full set of receipts (kind='receipt') for an item.
+
+    Images (kind='image') are preserved.
+    """
+    with connect() as conn:
+        conn.execute(
+            "DELETE FROM item_images WHERE item_id=? AND kind='receipt'",
+            (item_id,),
+        )
+        for p in paths:
+            conn.execute(
+                "INSERT INTO item_images (item_id, path, kind) VALUES (?, ?, 'receipt')",
                 (item_id, p),
             )
         conn.commit()
@@ -569,8 +603,14 @@ def duplicate_item(item_id: int, new_serial: str = "") -> int:
     src.updated_at = ""
     src.deleted_at = ""
     new_id = create_item(src)
-    for _img_id, path in list_images(item_id):
-        add_image(new_id, path)
+    # Copy all attachments, preserving their kind (image / receipt / ...).
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT path, kind FROM item_images WHERE item_id=? ORDER BY id",
+            (item_id,),
+        ).fetchall()
+    for r in rows:
+        add_image(new_id, r["path"], r["kind"])
     return new_id
 
 

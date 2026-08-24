@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS item_images (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     item_id    INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     path       TEXT NOT NULL,
+    kind       TEXT NOT NULL DEFAULT 'image',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -79,7 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_loans_open    ON loans(returned_on);
 """
 
 # Latest schema version. Bump when adding a migration.
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 def _column_exists(conn: sqlite3.Connection, table: str, column: str) -> bool:
@@ -164,6 +165,16 @@ def _migration_5_add_price_depreciation(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE items ADD COLUMN depreciation_years REAL")
 
 
+def _migration_6_add_image_kind(conn: sqlite3.Connection) -> None:
+    """v5 -> v6: add kind column to item_images (default 'image').
+
+    Existing rows default to 'image'. New rows can use 'receipt' (or any
+    other kind) to attach non-image files like PDF invoices.
+    """
+    if not _column_exists(conn, "item_images", "kind"):
+        conn.execute("ALTER TABLE item_images ADD COLUMN kind TEXT NOT NULL DEFAULT 'image'")
+
+
 # Ordered (version, migration_fn) pairs. Each migration brings the DB from
 # version N-1 to version N.
 _MIGRATIONS = [
@@ -172,6 +183,7 @@ _MIGRATIONS = [
     (3, _migration_3_add_contacts),
     (4, _migration_4_add_loans),
     (5, _migration_5_add_price_depreciation),
+    (6, _migration_6_add_image_kind),
 ]
 
 

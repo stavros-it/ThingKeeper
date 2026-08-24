@@ -67,6 +67,7 @@ from ..repository import (
     list_items,
     overdue_loan_item_ids,
     set_images,
+    set_receipts,
     total_quantity,
 )
 from .bulk_edit_dialog import BulkEditDialog
@@ -619,6 +620,7 @@ class MainWindow(QMainWindow):
             self.undo_stack.push(cmd)
             if item.id is not None:
                 set_images(item.id, dlg.extra_images())
+                set_receipts(item.id, dlg.receipts())
             self.refresh()
 
     def edit_selected(self) -> None:
@@ -634,6 +636,7 @@ class MainWindow(QMainWindow):
                 cmd = UpdateItemCommand(old, updated)
                 self.undo_stack.push(cmd)
                 set_images(it.id, dlg.extra_images())
+                set_receipts(it.id, dlg.receipts())
             else:
                 break
         self.refresh()
@@ -700,6 +703,7 @@ class MainWindow(QMainWindow):
                 cmd = UpdateItemCommand(old, updated)
                 self.undo_stack.push(cmd)
                 set_images(dlg.matched_item.id, edit.extra_images())
+                set_receipts(dlg.matched_item.id, edit.receipts())
             self.refresh()
         elif dlg.pending_serial:
             new_dlg = ItemDialog(self)
@@ -710,6 +714,7 @@ class MainWindow(QMainWindow):
                 self.undo_stack.push(cmd)
                 if item.id is not None:
                     set_images(item.id, new_dlg.extra_images())
+                    set_receipts(item.id, new_dlg.receipts())
             self.refresh()
 
     def show_trash(self) -> None:

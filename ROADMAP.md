@@ -209,6 +209,25 @@ first-launch tour.
 
 ---
 
+## v1.3 — Receipts and regional dates (Done)
+
+**Goal:** attach invoices to items, and show dates the way the host OS
+does.
+
+- **Receipts / invoices** — image or PDF attachment per item, stored in
+  `item_images` with a new `kind` column (migration v6, default
+  `'image'`). The item dialog has a "Receipt / Invoice" row with
+  Attach / Open / Remove buttons. "Open" hands the file to the OS
+  default handler (no in-app preview). Editing images never wipes
+  receipts and vice versa; `duplicate_item` copies both; `.tkz`
+  archives serialise `extra_receipts` alongside `extra_images`.
+- **OS regional date format** — `thingkeeper/ui/date_fmt.py` reads
+  `QLocale.system()` once and exposes `qt_date_format()` for `QDateEdit`
+  widgets and `format_iso_date()` for the items table. Storage stays
+  ISO `YYYY-MM-DD`. Falls back to `yyyy-MM-dd` in headless imports.
+
+---
+
 ## Long-term ideas (Later)
 
 - **Camera barcode scan** — use `python-opencv` or `zbar` for live camera decode

@@ -204,6 +204,7 @@ def import_archive(path: str | Path) -> ImportResult:
             Path(n).name for n in names if n.startswith("attachments/")
         }
         extra_to_restore: list[tuple[int, list[str]]] = []
+        receipts_to_restore: list[tuple[int, list[str]]] = []
         for idx, (record, item) in enumerate(paired):
             img = record.get("image_path") or ""
             if img:
@@ -211,19 +212,29 @@ def import_archive(path: str | Path) -> ImportResult:
                 if base in attach_names:
                     item.image_path = str(config.ATTACHMENTS_DIR / base)
             extras = record.get("extra_images") or []
-            if extras and item.id is None:
+            if extras:
                 extra_to_restore.append((idx, [
                     str(config.ATTACHMENTS_DIR / Path(e).name)
                     for e in extras if Path(e).name in attach_names
                 ]))
+            receipts = record.get("extra_receipts") or []
+            if receipts:
+                receipts_to_restore.append((idx, [
+                    str(config.ATTACHMENTS_DIR / Path(r).name)
+                    for r in receipts if Path(r).name in attach_names
+                ]))
 
         imported = bulk_insert(items)
-        # Now that items have IDs, restore extra images.
+        # Now that items have IDs, restore extra images and receipts.
         from .repository import add_image  # local to avoid cycle at import time
         for idx, paths in extra_to_restore:
             if idx < len(items) and items[idx].id is not None:
                 for p in paths:
-                    add_image(items[idx].id, p)
+                    add_image(items[idx].id, p, kind="image")
+        for idx, paths in receipts_to_restore:
+            if idx < len(items) and items[idx].id is not None:
+                for p in paths:
+                    add_image(items[idx].id, p, kind="receipt")
 
         # Restore contacts (must come before loans so FK can resolve).
         contact_id_map: dict[int, int] = {}

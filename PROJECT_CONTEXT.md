@@ -139,9 +139,16 @@ These rules keep the data layer unit-testable without a display server.
 | `id`         | INTEGER  | Primary key, autoincrement |
 | `item_id`    | INTEGER  | FK to `items(id)` ON DELETE CASCADE |
 | `path`       | TEXT     | absolute path under `data/attachments/` |
+| `kind`       | TEXT     | `'image'` (default) or `'receipt'`; v6 migration |
 | `created_at` | TEXT     | `datetime('now')` |
 
 **Index:** `item_id`.
+
+The `kind` column (added in migration v6) lets the same table store both
+gallery images and receipt/invoice files (including PDFs) without a
+second table. Existing rows default to `'image'`, so historical data is
+untouched. Receipts are excluded from `list_images()` / `set_images()`
+and vice versa, so editing one kind never wipes the other.
 
 ### `schema_version` table (migration runner, v0.2)
 
@@ -151,7 +158,7 @@ These rules keep the data layer unit-testable without a display server.
 | `applied` | TEXT    | `datetime('now')` — when the migration was applied |
 
 The migration runner in `database.py` applies additive migrations in order
-and records each applied version. Current schema version: 5.
+and records each applied version. Current schema version: 6.
 
 ### `contacts` table (loan tracking, v0.3)
 
@@ -449,6 +456,29 @@ and **First-launch tour…**. The language is read at construction time
 via `get_language()`, so the user gets the right locale by changing it
 in Settings first.
 
+### 6.14 Receipts / invoices share the item_images table via `kind`
+
+Receipts and invoices (image or PDF) are stored in the same `item_images`
+table as gallery images, distinguished by a `kind` column (`'image'`
+default, `'receipt'` for receipts). Added in migration v6 with a
+non-null default, so existing rows are auto-classified as images and
+historical data is untouched.
+
+- `repository.set_images()` writes only `kind='image'` rows; receipts
+  are preserved when the user edits the gallery.
+- `repository.set_receipts()` writes only `kind='receipt'` rows; images
+  are preserved when the user edits receipts.
+- `repository.duplicate_item()` copies both kinds so clones match.
+- The `.tkz` archive serialises `extra_images` and `extra_receipts` as
+  separate fields; import restores them with the right kind.
+- The item dialog shows a "Receipt / Invoice" row with Attach / Open /
+  Remove buttons. No in-app preview — "Open" launches the file via the
+  OS default handler (`os.startfile` on Windows, `open` on macOS,
+  `xdg-open` on Linux). PDFs and images both work because the file is
+  just handed to the OS.
+- `integrity.py` already iterates all `item_images` rows regardless of
+  kind, so receipt orphans are detected and cleaned up automatically.
+
 ---
 
 ## 7. Conventions
@@ -536,6 +566,7 @@ This is the pattern used by the smoke tests run during the initial build.
 | If you want to…                         | Touch… |
 |-----------------------------------------|--------|
 | Add a new item field                    | `repository.py` (dataclass + schema in `database.py` + importers/exporters + `item_dialog.py`) |
+| Attach a receipt / invoice (image or PDF) | `item_dialog.py` Receipt section + `repository.set_receipts()` |
 | Add a new filter                        | `repository.list_items()` + `main_window.py` |
 | Add a new status                        | `config.STATUSES` + `theme.STATUS_COLORS` |
 | Add a new import format                 | `importers.py` + a menu action in `main_window.py` |

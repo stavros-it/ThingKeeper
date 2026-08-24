@@ -32,10 +32,13 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import config
-from ..repository import Item, distinct_values, list_images
+from ..repository import Item, distinct_values, list_images, list_receipts
 from .date_fmt import qt_date_format
 
 _IMAGE_FILTERS = "Images (*.png *.jpg *.jpeg *.bmp *.webp *.gif);;All files (*.*)"
+_RECEIPT_FILTERS = (
+    "Receipts (*.png *.jpg *.jpeg *.bmp *.webp *.gif *.pdf);;All files (*.*)"
+)
 
 
 class ItemDialog(QDialog):
@@ -46,6 +49,7 @@ class ItemDialog(QDialog):
         self._item = item
         self._image_path: str = ""
         self._extra_images: list[str] = []
+        self._receipts: list[str] = []
         self._build_ui()
         if item is not None:
             self._load_item(item)
@@ -146,6 +150,28 @@ class ItemDialog(QDialog):
         extra_widget = QWidget()
         extra_widget.setLayout(extra_col)
 
+        # Receipts / invoices (image or PDF, no preview — open via OS handler).
+        self.receipt_list = QListWidget()
+        self.receipt_list.setIconSize(QSize(20, 20))
+        self.receipt_list.setMaximumHeight(110)
+        self.receipt_add_btn = QPushButton("Attach…")
+        self.receipt_add_btn.clicked.connect(self._add_receipt)
+        self.receipt_open_btn = QPushButton("Open")
+        self.receipt_open_btn.clicked.connect(self._open_receipt)
+        self.receipt_remove_btn = QPushButton("Remove")
+        self.receipt_remove_btn.clicked.connect(self._remove_receipt)
+
+        receipt_btns = QHBoxLayout()
+        receipt_btns.addWidget(self.receipt_add_btn)
+        receipt_btns.addWidget(self.receipt_open_btn)
+        receipt_btns.addWidget(self.receipt_remove_btn)
+        receipt_btns.addStretch(1)
+        receipt_col = QVBoxLayout()
+        receipt_col.addWidget(self.receipt_list)
+        receipt_col.addLayout(receipt_btns)
+        receipt_widget = QWidget()
+        receipt_widget.setLayout(receipt_col)
+
         warranty_row = QHBoxLayout()
         warranty_row.addWidget(self.warranty_edit, 1)
         warranty_row.addWidget(self.warranty_check)
@@ -170,6 +196,7 @@ class ItemDialog(QDialog):
         form.addRow("Notes:", self.info_edit)
         form.addRow("Primary image:", img_widget)
         form.addRow("More images:", extra_widget)
+        form.addRow("Receipt / Invoice:", receipt_widget)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
@@ -227,7 +254,10 @@ class ItemDialog(QDialog):
         if item.id is not None:
             for _img_id, path in list_images(item.id):
                 self._extra_images.append(path)
+            for _r_id, path in list_receipts(item.id):
+                self._receipts.append(path)
             self._refresh_extra_list()
+            self._refresh_receipt_list()
 
     @staticmethod
     def _parse_date(value: str, fallback: date) -> date:
@@ -306,6 +336,45 @@ class ItemDialog(QDialog):
                 )
             self.extra_list.addItem(item)
 
+    # ------------------------------------------------------- receipts / PDFs
+    def _add_receipt(self) -> None:
+        paths, _ = QFileDialog.getOpenFileNames(self, "Attach receipt", "", _RECEIPT_FILTERS)
+        for p in paths:
+            try:
+                self._receipts.append(self._copy_to_attachments(p))
+            except OSError as exc:
+                QMessageBox.warning(self, "Receipt", f"Could not attach {p}:\n{exc}")
+        self._refresh_receipt_list()
+
+    def _remove_receipt(self) -> None:
+        row = self.receipt_list.currentRow()
+        if 0 <= row < len(self._receipts):
+            self._receipts.pop(row)
+            self._refresh_receipt_list()
+
+    def _open_receipt(self) -> None:
+        row = self.receipt_list.currentRow()
+        if not (0 <= row < len(self._receipts)):
+            return
+        path = self._receipts[row]
+        if not Path(path).exists():
+            QMessageBox.information(self, "Receipt", "File no longer exists.")
+            return
+        import subprocess
+        import sys
+        if sys.platform == "win32":
+            import os
+            os.startfile(path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
+
+    def _refresh_receipt_list(self) -> None:
+        self.receipt_list.clear()
+        for path in self._receipts:
+            self.receipt_list.addItem(QListWidgetItem(Path(path).name))
+
     # -------------------------------------------------------- drag-and-drop
     def dragEnterEvent(self, event) -> None:  # noqa: N802 - Qt override
         if event.mimeData().hasUrls():
@@ -369,3 +438,7 @@ class ItemDialog(QDialog):
     def extra_images(self) -> list[str]:
         """Return the list of extra image paths (excluding the primary image)."""
         return list(self._extra_images)
+
+    def receipts(self) -> list[str]:
+        """Return the list of receipt / invoice paths attached to the item."""
+        return list(self._receipts)

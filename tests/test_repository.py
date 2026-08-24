@@ -28,6 +28,7 @@ from thingkeeper.repository import (
     list_item_loans,
     list_items,
     list_loans,
+    list_receipts,
     on_loan_item_ids,
     open_loan,
     overdue_loan_item_ids,
@@ -36,6 +37,7 @@ from thingkeeper.repository import (
     restore_item,
     return_loan,
     set_images,
+    set_receipts,
     soft_delete,
     total_depreciated_value,
     total_quantity,
@@ -245,6 +247,59 @@ def test_remove_image(repo, sample_item, tmp_path):
     img_id = add_image(iid, str(f))
     remove_image(img_id)
     assert len(list_images(iid)) == 0
+
+
+# ----------------------------------------------------------- receipts
+def test_add_and_list_receipts(repo, sample_item, tmp_path):
+    iid = create_item(sample_item(serial="RCP-1"))
+    f = tmp_path / "invoice.pdf"
+    f.write_bytes(b"%PDF-1.4 fake")
+    add_image(iid, str(f), kind="receipt")
+    receipts = list_receipts(iid)
+    assert len(receipts) == 1
+    assert receipts[0][1] == str(f)
+
+
+def test_set_receipts_replaces_only_receipts(repo, sample_item, tmp_path):
+    iid = create_item(sample_item(serial="RCP-2"))
+    img = tmp_path / "photo.png"
+    img.write_bytes(b"img")
+    add_image(iid, str(img), kind="image")
+    r1 = tmp_path / "r1.pdf"
+    r1.write_bytes(b"r1")
+    r2 = tmp_path / "r2.pdf"
+    r2.write_bytes(b"r2")
+    set_receipts(iid, [str(r1)])
+    assert len(list_receipts(iid)) == 1
+    assert len(list_images(iid)) == 1  # image preserved
+    set_receipts(iid, [str(r1), str(r2)])
+    assert len(list_receipts(iid)) == 2
+    assert len(list_images(iid)) == 1  # image still preserved
+
+
+def test_set_images_preserves_receipts(repo, sample_item, tmp_path):
+    iid = create_item(sample_item(serial="RCP-3"))
+    r = tmp_path / "receipt.pdf"
+    r.write_bytes(b"r")
+    set_receipts(iid, [str(r)])
+    img = tmp_path / "image.png"
+    img.write_bytes(b"i")
+    set_images(iid, [str(img)])
+    assert len(list_images(iid)) == 1
+    assert len(list_receipts(iid)) == 1  # receipt survived set_images
+
+
+def test_duplicate_item_copies_receipts(repo, sample_item, tmp_path):
+    iid = create_item(sample_item(serial="RCP-4"))
+    img = tmp_path / "image.png"
+    img.write_bytes(b"i")
+    r = tmp_path / "invoice.pdf"
+    r.write_bytes(b"r")
+    add_image(iid, str(img), kind="image")
+    add_image(iid, str(r), kind="receipt")
+    new_id = duplicate_item(iid, new_serial="RCP-4-DUP")
+    assert len(list_images(new_id)) == 1
+    assert len(list_receipts(new_id)) == 1
 
 
 # ----------------------------------------------------------- contacts

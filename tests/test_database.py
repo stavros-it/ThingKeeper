@@ -18,10 +18,10 @@ def test_init_db_creates_schema(db):
         conn.close()
 
 
-def test_schema_version_is_5(db):
+def test_schema_version_is_6(db):
     conn = db.connect()
     try:
-        assert db._get_schema_version(conn) == 5
+        assert db._get_schema_version(conn) == 6
     finally:
         conn.close()
 
@@ -31,7 +31,7 @@ def test_init_db_is_idempotent(db):
     db.init_db()
     conn = db.connect()
     try:
-        assert db._get_schema_version(conn) == 5
+        assert db._get_schema_version(conn) == 6
     finally:
         conn.close()
 
@@ -43,6 +43,15 @@ def test_new_columns_exist(db):
         assert "unit_price" in cols
         assert "depreciation_years" in cols
         assert "deleted_at" in cols
+    finally:
+        conn.close()
+
+
+def test_item_images_has_kind_column(db):
+    conn = db.connect()
+    try:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(item_images)")}
+        assert "kind" in cols
     finally:
         conn.close()
 
@@ -135,8 +144,8 @@ def test_init_db_on_v0_legacy_schema(db, isolated_data_dir):
         assert "deleted_at" in cols
         assert "unit_price" in cols
         assert "depreciation_years" in cols
-        # Schema version is now 5.
-        assert db._get_schema_version(conn) == 5
+        # Schema version is now 6.
+        assert db._get_schema_version(conn) == 6
         # The legacy row survived.
         row = conn.execute(
             "SELECT serial FROM items WHERE serial = ?", ("LEGACY-001",)
