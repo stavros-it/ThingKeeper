@@ -64,7 +64,9 @@ from ..repository import (
     Item,
     distinct_values,
     get_item,
+    list_images,
     list_items,
+    list_receipts,
     overdue_loan_item_ids,
     set_images,
     set_receipts,
@@ -104,6 +106,8 @@ COLUMNS = [
     ("Purchase", 100),
     ("Warranty", 100),
     ("Store", 100),
+    ("Img", 40),
+    ("Rcp", 40),
 ]
 
 _SETTINGS_FILTERS = "filters/saved"
@@ -518,6 +522,10 @@ class MainWindow(QMainWindow):
 
         for row, it in enumerate(items):
             w_disp, w_tip, w_fg, w_bg, w_bold, w_italic = _warranty_status(it)
+            has_images = bool(it.image_path) or (
+                it.id is not None and bool(list_images(it.id))
+            )
+            has_receipts = it.id is not None and bool(list_receipts(it.id))
             cells = [
                 str(it.id) if it.id is not None else "",
                 it.group_name,
@@ -533,6 +541,8 @@ class MainWindow(QMainWindow):
                 _fmt_date(it.purchase_date),
                 w_disp,
                 it.store,
+                "\u2714" if has_images else "",
+                "\u2714" if has_receipts else "",
             ]
             for col, value in enumerate(cells):
                 item = QTableWidgetItem(value)
@@ -543,6 +553,12 @@ class MainWindow(QMainWindow):
                         item.setData(Qt.ItemDataRole.UserRole, float(value.replace(",", "")))
                     except (ValueError, TypeError):
                         pass
+                if col in (14, 15):
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    if value:
+                        item.setToolTip(
+                            "Has image(s)" if col == 14 else "Has receipt(s)"
+                        )
                 if col == 5:
                     color = STATUS_COLORS.get(it.status, TEXT)
                     item.setForeground(QColor(color))
