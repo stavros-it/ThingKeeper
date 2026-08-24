@@ -1,0 +1,45 @@
+# Default: text files use LF in the repo and working tree.
+# This takes precedence over core.autocrlf and silences the
+# "LF will be replaced by CRLF" warnings.
+* text=auto eol=lf
+
+# Windows-only scripts must keep CRLF (batch files choke on LF).
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# PowerShell tolerates either; keep CRLF for consistency with Windows tooling.
+*.ps1   text eol=crlf
+*.psm1  text eol=crlf
+
+# Shell scripts must stay LF.
+*.sh    text eol=lf
+AppRun  text eol=lf
+
+# Source code — LF everywhere.
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.toml  text eol=lf
+*.cfg   text eol=lf
+*.ini   text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.spec  text eol=lf
+*.iss   text eol=crlf
+*.desktop text eol=lf
+
+# Binaries — never normalize.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.bmp   binary
+*.webp  binary
+*.ico   binary
+*.icns  binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.tkz   binary
+*.db    binary
+*.xlsx  binary
