@@ -208,9 +208,11 @@ class MainWindow(QMainWindow):
         backup_mod.maybe_auto_backup()
 
     def _tr(self, text: str, setter: Any) -> str:
-        """Translate ``text`` now and register (setter, text) for live retranslation."""
+        """Translate ``text``, apply it now, and register for retranslation."""
         self._tr_items.append((setter, text))
-        return tr(text)
+        result = tr(text)
+        setter(result)
+        return result
 
     def _retranslate_ui(self) -> None:
         """Re-apply tr() to every registered widget/action.
@@ -270,21 +272,26 @@ class MainWindow(QMainWindow):
 
         filters = QHBoxLayout()
         filters.addWidget(self.search_edit, 1)
-        group_label = QLabel(self._tr("Group:", lambda t: group_label.setText(t)))
+        group_label = QLabel(tr("Group:"))
+        self._tr("Group:", group_label.setText)
         filters.addWidget(group_label)
         filters.addWidget(self.group_combo)
-        type_label = QLabel(self._tr("Type:", lambda t: type_label.setText(t)))
+        type_label = QLabel(tr("Type:"))
+        self._tr("Type:", type_label.setText)
         filters.addWidget(type_label)
         filters.addWidget(self.type_combo)
-        brand_label = QLabel(self._tr("Brand:", lambda t: brand_label.setText(t)))
+        brand_label = QLabel(tr("Brand:"))
+        self._tr("Brand:", brand_label.setText)
         filters.addWidget(brand_label)
         filters.addWidget(self.brand_combo)
-        status_label = QLabel(self._tr("Status:", lambda t: status_label.setText(t)))
+        status_label = QLabel(tr("Status:"))
+        self._tr("Status:", status_label.setText)
         filters.addWidget(status_label)
         filters.addWidget(self.status_combo)
         filters.addWidget(clear_btn)
         filters.addSpacing(12)
-        presets_label = QLabel(self._tr("Presets:", lambda t: presets_label.setText(t)))
+        presets_label = QLabel(tr("Presets:"))
+        self._tr("Presets:", presets_label.setText)
         filters.addWidget(presets_label)
         filters.addWidget(self.saved_combo)
         filters.addWidget(save_filter_btn)
@@ -508,7 +515,7 @@ class MainWindow(QMainWindow):
         self._add_action(help_menu, "&About", self._about)
 
     def _add_action(self, menu, text, slot, shortcut=None) -> QAction:
-        act = QAction(self)
+        act = QAction(tr(text), self)
         self._tr(text, act.setText)
         if shortcut:
             act.setShortcut(shortcut)
