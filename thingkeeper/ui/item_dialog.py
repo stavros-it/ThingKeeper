@@ -227,7 +227,7 @@ class ItemDialog(QDialog):
         layout.addWidget(scroll, 1)
         layout.addWidget(buttons)
 
-        size_to_available(self, 0.5, 0.95)
+        size_to_available(self, 0.5, 0.95, max_w=900)
 
     def _combo_edit(self, column: str) -> QComboBox:
         combo = QComboBox()

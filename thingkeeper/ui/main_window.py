@@ -182,7 +182,7 @@ class MainWindow(QMainWindow):
         if icon_path.is_file():
             self.setWindowIcon(QIcon(str(icon_path)))
         self.resize(1280, 760)
-        size_to_available(self, 0.85, 0.85)
+        size_to_available(self, 0.85, 0.85, max_w=1600)
         self._items: list[Item] = []
         self._settings = QSettings("ThingKeeper", "ThingKeeper")
         self._first_populate = True
@@ -431,10 +431,10 @@ class MainWindow(QMainWindow):
     def _build_menu(self) -> None:
         mb = self.menuBar()
 
-        file_menu = mb.addMenu("")
+        file_menu = mb.addMenu(tr("&File"))
         self._tr("&File", file_menu.setTitle)
 
-        self._imp_menu = file_menu.addMenu("")
+        self._imp_menu = file_menu.addMenu(tr("&Import"))
         self._tr("&Import", self._imp_menu.setTitle)
         self._add_action(self._imp_menu, "Excel workbook (.xlsx)…", self._import_excel)
         self._add_action(self._imp_menu, "ThingKeeper archive (.tkz)…", self._import_archive)
@@ -443,7 +443,7 @@ class MainWindow(QMainWindow):
         self._add_action(self._imp_menu, "CSV (.csv)…", self._import_csv)
         self._imp_menu.aboutToShow.connect(self._refresh_recent_imports)
 
-        self._exp_menu = file_menu.addMenu("")
+        self._exp_menu = file_menu.addMenu(tr("&Export"))
         self._tr("&Export", self._exp_menu.setTitle)
         self._add_action(self._exp_menu, "ThingKeeper archive (.tkz)…", self._export_archive)
         self._add_action(self._exp_menu, "Encrypted archive (.tkz)…",
@@ -460,7 +460,7 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         self._add_action(file_menu, "&Quit", self.close, "Ctrl+Q")
 
-        edit_menu = mb.addMenu("")
+        edit_menu = mb.addMenu(tr("&Edit"))
         self._tr("&Edit", edit_menu.setTitle)
         self._add_action(edit_menu, "&New item", self.new_item, "Ctrl+N")
         self._add_action(edit_menu, "&Edit item", self.edit_selected, "Ctrl+E")
@@ -472,7 +472,7 @@ class MainWindow(QMainWindow):
         edit_menu.addSeparator()
         self._add_action(edit_menu, "&Bulk edit…", self.bulk_edit, "Ctrl+B")
 
-        view_menu = mb.addMenu("")
+        view_menu = mb.addMenu(tr("&View"))
         self._tr("&View", view_menu.setTitle)
         self._add_action(view_menu, "&Refresh", self.refresh, "F5")
         self._add_action(view_menu, "&Scan serial", self.scan_serial, "Ctrl+K")
@@ -481,7 +481,7 @@ class MainWindow(QMainWindow):
         self._add_action(view_menu, "&Trash…", self.show_trash)
         view_menu.addSeparator()
         self._add_action(view_menu, "&Columns…", self._show_column_menu_at_zero)
-        loans_menu = mb.addMenu("")
+        loans_menu = mb.addMenu(tr("&Loans"))
         self._tr("&Loans", loans_menu.setTitle)
 
         self._add_action(loans_menu, "&Loan selected item…", self.loan_selected, "Ctrl+L")
@@ -490,7 +490,7 @@ class MainWindow(QMainWindow):
         self._add_action(loans_menu, "&Contacts…", self.show_contacts)
         self._add_action(loans_menu, "Loan &history for selected…", self.show_loan_history)
 
-        tools_menu = mb.addMenu("")
+        tools_menu = mb.addMenu(tr("&Tools"))
         self._tr("&Tools", tools_menu.setTitle)
         self._add_action(tools_menu, "&Back up now…", self.backup_now)
         self._add_action(tools_menu, "&Restore from backup…", self.restore_from_backup)
@@ -500,7 +500,7 @@ class MainWindow(QMainWindow):
         tools_menu.addSeparator()
         self._add_action(tools_menu, "Open log &file", self._open_log)
 
-        help_menu = mb.addMenu("")
+        help_menu = mb.addMenu(tr("&Help"))
         self._tr("&Help", help_menu.setTitle)
         self._add_action(help_menu, "&Keyboard shortcuts…", self.show_help, "F1")
         self._add_action(help_menu, "&First-launch tour…", self.show_tour)
