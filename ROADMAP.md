@@ -231,14 +231,34 @@ does.
 
 ---
 
-## v1.4 — Release checksums (Done)
+## v1.4 — Release checksums, live language switch, responsive UI (Done)
 
-**Goal:** make every release verifiable.
+**Goal:** make every release verifiable, switch language without a
+restart, and make the main window and item dialog fill the available
+desktop area.
 
 - **SHA256 checksums** — the release workflow now emits a `.sha256`
   file alongside each Windows portable zip and Linux AppImage, so users
   can verify download integrity with `sha256sum -c` (Linux) or
   `Get-FileHash` (Windows). No code change; release workflow only.
+- **Img and Rcp checkmark columns** — two narrow columns at the end
+  of the items table show a centered checkmark when the item has
+  images (primary or extras) or receipts attached. Computed at view
+  time from `items.image_path` + `item_images` rows; no schema change.
+- **Live language switching** — `MainWindow` keeps a `_tr_items` list
+  of `(setter, english_text)` tuples for every translatable
+  widget/action. On `QEvent.LanguageChange`, `_retranslate_ui()`
+  re-applies `tr()` to each. The settings dialog posts the event after
+  `set_language()`, so menus/toolbar/filters swap instantly — no
+  restart.
+- **Item dialog scrolling** — the form layout is wrapped in a
+  `QScrollArea` so Save/Cancel stay pinned at the bottom and the form
+  scrolls when the window is too short.
+- **Responsive window sizing** — new `thingkeeper/ui/sizing.py`
+  helper uses `QScreen.availableGeometry()` (screen minus taskbar on
+  Windows, panels on Linux) to size windows. `MainWindow` fills 85%
+  of the available area; `ItemDialog` fills 95% of the height so the
+  form reaches from the top of the work area to the taskbar.
 
 ---
 
