@@ -106,6 +106,7 @@ class ItemDialog(QDialog):
         self.info_edit = QTextEdit()
         self.info_edit.setMaximumHeight(80)
 
+        # Primary image preview + extras list, grouped in one section.
         # Primary image.
         self.image_label = QLabel("No image")
         self.image_label.setFixedSize(200, 150)
@@ -130,18 +131,21 @@ class ItemDialog(QDialog):
         img_widget = QWidget()
         img_widget.setLayout(img_row)
 
-        # Extra images gallery.
+        # Extra images list (open via OS handler, no in-list preview).
         self.extra_list = QListWidget()
         self.extra_list.setIconSize(QSize(60, 60))
         self.extra_list.setMaximumHeight(110)
         self.extra_list.setAcceptDrops(True)
         self.extra_add_btn = QPushButton("Add…")
         self.extra_add_btn.clicked.connect(self._add_extra_image)
+        self.extra_open_btn = QPushButton("Open")
+        self.extra_open_btn.clicked.connect(self._open_extra_image)
         self.extra_remove_btn = QPushButton("Remove")
         self.extra_remove_btn.clicked.connect(self._remove_extra_image)
 
         extra_btns = QHBoxLayout()
         extra_btns.addWidget(self.extra_add_btn)
+        extra_btns.addWidget(self.extra_open_btn)
         extra_btns.addWidget(self.extra_remove_btn)
         extra_btns.addStretch(1)
         extra_col = QVBoxLayout()
@@ -149,6 +153,13 @@ class ItemDialog(QDialog):
         extra_col.addLayout(extra_btns)
         extra_widget = QWidget()
         extra_widget.setLayout(extra_col)
+
+        # Combine primary preview + extras list into a single "Images" widget.
+        images_col = QVBoxLayout()
+        images_col.addWidget(img_widget)
+        images_col.addWidget(extra_widget)
+        images_widget = QWidget()
+        images_widget.setLayout(images_col)
 
         # Receipts / invoices (image or PDF, no preview — open via OS handler).
         self.receipt_list = QListWidget()
@@ -194,8 +205,7 @@ class ItemDialog(QDialog):
         form.addRow("Purchase date:", self.purchase_edit)
         form.addRow("Warranty end:", warranty_widget)
         form.addRow("Notes:", self.info_edit)
-        form.addRow("Primary image:", img_widget)
-        form.addRow("More images:", extra_widget)
+        form.addRow("Images:", images_widget)
         form.addRow("Receipt / Invoice:", receipt_widget)
 
         buttons = QDialogButtonBox(
@@ -356,9 +366,19 @@ class ItemDialog(QDialog):
         row = self.receipt_list.currentRow()
         if not (0 <= row < len(self._receipts)):
             return
-        path = self._receipts[row]
+        self._open_external(self._receipts[row], "Receipt")
+
+    def _open_extra_image(self) -> None:
+        row = self.extra_list.currentRow()
+        if not (0 <= row < len(self._extra_images)):
+            return
+        self._open_external(self._extra_images[row], "Image")
+
+    @staticmethod
+    def _open_external(path: str, label: str) -> None:
+        """Open a file via the OS default handler (no in-app preview)."""
         if not Path(path).exists():
-            QMessageBox.information(self, "Receipt", "File no longer exists.")
+            QMessageBox.information(None, label, "File no longer exists.")
             return
         import subprocess
         import sys
