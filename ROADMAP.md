@@ -228,6 +228,17 @@ does.
 
 ---
 
+## v1.4 — Release checksums (Done)
+
+**Goal:** make every release verifiable.
+
+- **SHA256 checksums** — the release workflow now emits a `.sha256`
+  file alongside each Windows portable zip and Linux AppImage, so users
+  can verify download integrity with `sha256sum -c` (Linux) or
+  `Get-FileHash` (Windows). No code change; release workflow only.
+
+---
+
 ## Long-term ideas (Later)
 
 - **Camera barcode scan** — use `python-opencv` or `zbar` for live camera decode

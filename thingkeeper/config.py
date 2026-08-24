@@ -18,7 +18,7 @@ ATTACHMENTS_DIR = DATA_DIR / "attachments"
 ATTACHMENTS_DIR.mkdir(parents=True, exist_ok=True)
 
 APP_NAME = "ThingKeeper"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.3.0"
 
 # Status lifecycle.
 STATUSES = ["AVAILABLE", "IN USE", "LOANED", "BROKEN", "SOLD"]

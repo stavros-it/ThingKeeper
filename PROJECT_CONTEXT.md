@@ -232,7 +232,7 @@ ThingKeeper/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml               # ruff + pytest on Ubuntu + Windows, Python 3.10 + 3.12
-│       └── release.yml          # build Windows portable zip + Linux AppImage on tag push
+│       └── release.yml          # build Windows portable zip + Linux AppImage + SHA256 checksums on tag push
 ├── tests/                       # pytest + pytest-qt test suite (140 tests)
 └── thingkeeper/
     ├── __init__.py              # version
