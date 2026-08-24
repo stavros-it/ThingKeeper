@@ -35,6 +35,7 @@ from PyQt6.QtWidgets import (
 from .. import config
 from ..repository import Item, distinct_values, list_images, list_receipts
 from .date_fmt import qt_date_format
+from .sizing import size_to_available
 
 _IMAGE_FILTERS = "Images (*.png *.jpg *.jpeg *.bmp *.webp *.gif);;All files (*.*)"
 _RECEIPT_FILTERS = (
@@ -225,6 +226,8 @@ class ItemDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(scroll, 1)
         layout.addWidget(buttons)
+
+        size_to_available(self, 0.5, 0.95)
 
     def _combo_edit(self, column: str) -> QComboBox:
         combo = QComboBox()

@@ -272,6 +272,7 @@ ThingKeeper/
         ├── help_dialog.py        # keyboard shortcut cheatsheet + first-launch tour
         ├── theme.py             # dark palette + QSS stylesheet + semantic colors
         ├── date_fmt.py          # OS regional date format helpers (QLocale.system())
+        ├── sizing.py            # size_to_available() — fill screen minus taskbar/panels
         └── reports_dialog.py    # PDF report dialog
 ```
 
@@ -497,6 +498,28 @@ historical data is untouched.
   just handed to the OS.
 - `integrity.py` already iterates all `item_images` rows regardless of
   kind, so receipt orphans are detected and cleaned up automatically.
+
+### 6.15 Windows size to the available desktop area
+
+`thingkeeper/ui/sizing.py::size_to_available(widget, w_ratio, h_ratio)`
+sizes a top-level widget to a fraction of the current screen's
+`availableGeometry()` — the desktop region excluding the taskbar on
+Windows and panels on most Linux X11/Wayland WMs. The widget is then
+centred within that region.
+
+- `MainWindow` uses `(0.85, 0.85)` so the table fills most of the
+  screen without overlapping the taskbar.
+- `ItemDialog` uses `(0.5, 0.95)` — narrow (the form is a single
+  column) but tall, so the scroll area reaches from the top of the
+  work area down to the taskbar and Save/Cancel stay pinned at the
+  bottom.
+- `widget.screen()` (or `QApplication.primaryScreen()` during early
+  init) is used so multi-monitor setups open the window on the same
+  screen as the parent.
+- Falls back silently when no screen is available (headless CI).
+
+Other dialogs keep their existing `resize(...)` calls because their
+content is small and a near-fullscreen window would look wrong.
 
 ---
 

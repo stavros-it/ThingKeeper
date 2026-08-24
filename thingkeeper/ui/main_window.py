@@ -79,6 +79,7 @@ from .item_dialog import ItemDialog
 from .reports_dialog import ReportsDialog
 from .scan_dialog import ScanDialog
 from .settings_dialog import SettingsDialog
+from .sizing import size_to_available
 from .theme import (
     DANGER,
     DANGER_BG,
@@ -181,6 +182,7 @@ class MainWindow(QMainWindow):
         if icon_path.is_file():
             self.setWindowIcon(QIcon(str(icon_path)))
         self.resize(1280, 760)
+        size_to_available(self, 0.85, 0.85)
         self._items: list[Item] = []
         self._settings = QSettings("ThingKeeper", "ThingKeeper")
         self._first_populate = True

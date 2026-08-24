@@ -132,3 +132,33 @@ def test_main_window_live_retranslate(qtbot, db, fake_msgbox, sample_item):
     w._retranslate_ui()
     assert w.act_new.text() == "New item"
     assert w.act_trash.text() == "Trash"
+
+
+def test_main_window_fills_available_screen(qtbot, db, fake_msgbox):
+    from PyQt6.QtWidgets import QApplication
+
+    from thingkeeper.ui.main_window import MainWindow
+
+    screen = QApplication.primaryScreen()
+    assert screen is not None
+    avail = screen.availableGeometry()
+    w = MainWindow()
+    qtbot.addWidget(w)
+    assert w.height() >= int(avail.height() * 0.80)
+    assert w.width() >= int(avail.width() * 0.80)
+
+
+def test_item_dialog_fills_available_height(qtbot, db, fake_msgbox, sample_item):
+    from PyQt6.QtWidgets import QApplication
+
+    from thingkeeper.ui.item_dialog import ItemDialog
+    from thingkeeper.ui.main_window import MainWindow
+
+    parent = MainWindow()
+    qtbot.addWidget(parent)
+    dlg = ItemDialog(parent)
+    qtbot.addWidget(dlg)
+    screen = QApplication.primaryScreen()
+    assert screen is not None
+    avail = screen.availableGeometry()
+    assert dlg.height() >= int(avail.height() * 0.90)
