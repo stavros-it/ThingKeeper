@@ -470,8 +470,23 @@ def all_items() -> list[Item]:
     return list_items()
 
 
+def all_items_with_trash() -> list[Item]:
+    """Return every item, including soft-deleted (trashed) ones.
+
+    Used by archive export so that restoring a backup brings back the
+    trash too. Ordering matches `list_items()` (active first, then
+    trash) so the archive is stable.
+    """
+    return list_items(include_deleted=True)
+
+
 def bulk_insert(items: Iterable[Item]) -> int:
-    """Insert many items; returns count inserted. Sets id on each item."""
+    """Insert many items; returns count inserted. Sets id on each item.
+
+    Preserves `deleted_at` so that soft-deleted (trashed) items restored
+    from a .tkz archive land back in the trash instead of being
+    silently un-deleted.
+    """
     count = 0
     with connect() as conn:
         for it in items:
@@ -482,8 +497,8 @@ def bulk_insert(items: Iterable[Item]) -> int:
                       (id, group_name, type, brand, model, info, serial, store,
                        purchase_date, status, quantity, location, warranty_end,
                        image_path, unit_price, depreciation_years,
-                       created_at, updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                       deleted_at, created_at, updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     """,
                     (
                         it.id,
@@ -491,6 +506,7 @@ def bulk_insert(items: Iterable[Item]) -> int:
                         it.serial, it.store, it.purchase_date, it.status,
                         it.quantity, it.location, it.warranty_end,
                         it.image_path, it.unit_price, it.depreciation_years,
+                        it.deleted_at or None,
                         it.created_at or None,
                         it.updated_at or None,
                     ),
@@ -501,14 +517,15 @@ def bulk_insert(items: Iterable[Item]) -> int:
                     INSERT INTO items
                       (group_name, type, brand, model, info, serial, store,
                        purchase_date, status, quantity, location, warranty_end,
-                       image_path, unit_price, depreciation_years)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                       image_path, unit_price, depreciation_years, deleted_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     """,
                     (
                         it.group_name, it.type, it.brand, it.model, it.info,
                         it.serial, it.store, it.purchase_date, it.status,
                         it.quantity, it.location, it.warranty_end,
                         it.image_path, it.unit_price, it.depreciation_years,
+                        it.deleted_at or None,
                     ),
                 )
             if it.id is None:

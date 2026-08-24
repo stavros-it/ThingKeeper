@@ -13,6 +13,7 @@ from . import config
 from .repository import (
     Item,
     all_items,
+    all_items_with_trash,
     counts_by,
     list_contacts,
     list_images,
@@ -60,7 +61,7 @@ def export_archive(path: str | Path, items: list[Item] | None = None) -> Path:
         contacts.json.gz     — gzipped JSON list of contact dicts
         attachments/<file>   — referenced image files
     """
-    items = items if items is not None else all_items()
+    items = items if items is not None else all_items_with_trash()
     path = Path(path)
     records = []
     attach_seen: set[str] = set()

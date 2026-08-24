@@ -340,6 +340,13 @@ Gzipping the JSON before zipping gives much better compression for repetitive
 text data, since ZIP's own DEFLATE doesn't re-compress already-compressed
 payloads well. The format is open and documented; any user can unzip one.
 
+The item dict carries every field the user entered plus `extra_images`
+and `extra_receipts` lists (attachment basenames). Soft-deleted (trashed)
+items are included so restoring a backup brings back the trash; their
+`deleted_at` timestamp is preserved on import so they stay in the trash.
+Contacts and loans are serialised alongside items; loan-to-item links
+are re-mapped by serial on import.
+
 ### 6.4 Import is idempotent at the row level, not the item level
 
 Importing the same `.xlsx` twice creates duplicate items. This was deliberate:

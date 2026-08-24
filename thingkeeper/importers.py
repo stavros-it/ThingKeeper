@@ -144,6 +144,7 @@ def _record_to_item(record: dict) -> Item:
         image_path="",  # attachments restored separately
         unit_price=_float(record.get("unit_price", 0.0)),
         depreciation_years=_float(record.get("depreciation_years", 0.0)),
+        deleted_at=str(record.get("deleted_at") or ""),
         created_at=str(record.get("created_at") or ""),
         updated_at=str(record.get("updated_at") or ""),
     )

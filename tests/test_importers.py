@@ -25,6 +25,7 @@ from thingkeeper.repository import (
     list_images,
     list_items,
     list_receipts,
+    soft_delete,
 )
 
 
@@ -193,5 +194,61 @@ def test_archive_round_trip_preserves_receipts(repo, sample_item, tmp_path):
     result = import_archive(archive_path)
     assert result.imported == 1
     restored = list_items()[0]
+    assert len(list_images(restored.id)) == 1
+    assert len(list_receipts(restored.id)) == 1
+
+
+def test_archive_round_trip_preserves_trash(repo, sample_item, tmp_path):
+    """Soft-deleted (trashed) items must survive a .tkz export/import and
+    stay in the trash after restore."""
+    active = create_item(sample_item(serial="TRASH-ARC-1"))
+    trashed = create_item(sample_item(serial="TRASH-ARC-2"))
+    soft_delete(trashed)
+    assert len(list_items()) == 1
+    assert len(list_items(include_deleted=True)) == 2
+
+    archive_path = tmp_path / "with_trash.tkz"
+    export_archive(archive_path)
+
+    for it in list_items(include_deleted=True):
+        hard_delete(it.id)
+    assert len(list_items(include_deleted=True)) == 0
+
+    result = import_archive(archive_path)
+    assert result.imported == 2
+    # Active items visible in the normal list, trash preserved separately.
+    assert len(list_items()) == 1
+    assert len(list_items(include_deleted=True)) == 2
+    restored_trashed = next(
+        i for i in list_items(include_deleted=True) if i.serial == "TRASH-ARC-2"
+    )
+    assert restored_trashed.deleted_at  # non-empty timestamp
+    assert restored_trashed.id != active  # distinct row
+
+
+def test_archive_round_trip_preserves_attachments_on_trashed_items(
+    repo, sample_item, tmp_path
+):
+    """Attachments on trashed items must also survive backup/restore."""
+    iid = create_item(sample_item(serial="TRASH-ATT-1"))
+    img_path = tmp_path / "photo.png"
+    img_path.write_bytes(b"png bytes")
+    rcp_path = tmp_path / "receipt.pdf"
+    rcp_path.write_bytes(b"%PDF bytes")
+    add_image(iid, str(img_path), kind="image")
+    add_image(iid, str(rcp_path), kind="receipt")
+    soft_delete(iid)
+
+    archive_path = tmp_path / "trash_with_attachments.tkz"
+    export_archive(archive_path)
+
+    for it in list_items(include_deleted=True):
+        hard_delete(it.id)
+    assert len(list_items(include_deleted=True)) == 0
+
+    result = import_archive(archive_path)
+    assert result.imported == 1
+    restored = list_items(include_deleted=True)[0]
+    assert restored.deleted_at  # still trashed
     assert len(list_images(restored.id)) == 1
     assert len(list_receipts(restored.id)) == 1
