@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PyQt6.QtCore import QCoreApplication, QEvent
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -116,4 +117,9 @@ class SettingsDialog(QDialog):
         backup_mod.set_interval_minutes(self.interval_spin.value())
         new_lang = self.lang_combo.currentData()
         set_language(new_lang)
+        parent = self.parent()
+        if parent is not None:
+            QCoreApplication.postEvent(
+                parent, QEvent(QEvent.Type.LanguageChange)
+            )
         self.accept()

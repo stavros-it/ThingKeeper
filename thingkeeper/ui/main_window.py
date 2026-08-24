@@ -11,8 +11,9 @@ import json
 import sys
 from datetime import date
 from pathlib import Path
+from typing import Any
 
-from PyQt6.QtCore import QSettings, Qt, QTimer
+from PyQt6.QtCore import QEvent, QSettings, Qt, QTimer
 from PyQt6.QtGui import QAction, QColor, QIcon, QKeySequence
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -185,6 +186,9 @@ class MainWindow(QMainWindow):
         self._first_populate = True
         self.undo_stack = UndoStack()
         self.undo_stack.set_changed_callback(self._update_undo_actions)
+        # Translatable items: (setter, english_text) pairs, applied on
+        # LanguageChange events so the UI updates without a restart.
+        self._tr_items: list[tuple[Any, str]] = []
         self._build_ui()
         self._build_menu()
         self._build_toolbar()
@@ -201,6 +205,26 @@ class MainWindow(QMainWindow):
         self._backup_scheduler.start()
         backup_mod.maybe_auto_backup()
 
+    def _tr(self, text: str, setter: Any) -> str:
+        """Translate ``text`` now and register (setter, text) for live retranslation."""
+        self._tr_items.append((setter, text))
+        return tr(text)
+
+    def _retranslate_ui(self) -> None:
+        """Re-apply tr() to every registered widget/action.
+
+        Called on QEvent.LanguageChange so the UI updates immediately
+        when the user switches language in Settings, without a restart.
+        """
+        for setter, text in self._tr_items:
+            setter(tr(text))
+        self._update_undo_actions()
+
+    def changeEvent(self, event: QEvent) -> None:
+        if event.type() == QEvent.Type.LanguageChange:
+            self._retranslate_ui()
+        super().changeEvent(event)
+
     # --------------------------------------------------------------- layout
     def _build_ui(self) -> None:
         central = QWidget()
@@ -210,10 +234,11 @@ class MainWindow(QMainWindow):
 
         # Filter bar.
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText(
-            "Search group, type, brand, model, serial, location…"
+        self._tr(
+            "Search group, type, brand, model, serial, location…",
+            self.search_edit.setPlaceholderText,
         )
-        self.search_edit.setStatusTip("Filter items by text (Ctrl+F to focus)")
+        self._tr("Filter items by text (Ctrl+F to focus)", self.search_edit.setStatusTip)
         self.search_edit.setAccessibleName("Search box")
         self.search_edit.textChanged.connect(self._on_search_changed)
         self.search_edit.setClearButtonEnabled(True)
@@ -229,6 +254,7 @@ class MainWindow(QMainWindow):
             combo.currentIndexChanged.connect(self.refresh)
 
         clear_btn = QPushButton(tr("Clear"))
+        self._tr("Clear", clear_btn.setText)
         clear_btn.clicked.connect(self._clear_filters)
 
         # Saved filters.
@@ -237,21 +263,27 @@ class MainWindow(QMainWindow):
         self.saved_combo.currentIndexChanged.connect(self._recall_filter)
         self._refresh_saved_combo()
         save_filter_btn = QPushButton(tr("Save…"))
+        self._tr("Save…", save_filter_btn.setText)
         save_filter_btn.clicked.connect(self._save_filter)
 
         filters = QHBoxLayout()
         filters.addWidget(self.search_edit, 1)
-        filters.addWidget(QLabel(tr("Group:")))
+        group_label = QLabel(self._tr("Group:", lambda t: group_label.setText(t)))
+        filters.addWidget(group_label)
         filters.addWidget(self.group_combo)
-        filters.addWidget(QLabel(tr("Type:")))
+        type_label = QLabel(self._tr("Type:", lambda t: type_label.setText(t)))
+        filters.addWidget(type_label)
         filters.addWidget(self.type_combo)
-        filters.addWidget(QLabel(tr("Brand:")))
+        brand_label = QLabel(self._tr("Brand:", lambda t: brand_label.setText(t)))
+        filters.addWidget(brand_label)
         filters.addWidget(self.brand_combo)
-        filters.addWidget(QLabel(tr("Status:")))
+        status_label = QLabel(self._tr("Status:", lambda t: status_label.setText(t)))
+        filters.addWidget(status_label)
         filters.addWidget(self.status_combo)
         filters.addWidget(clear_btn)
         filters.addSpacing(12)
-        filters.addWidget(QLabel(tr("Presets:")))
+        presets_label = QLabel(self._tr("Presets:", lambda t: presets_label.setText(t)))
+        filters.addWidget(presets_label)
         filters.addWidget(self.saved_combo)
         filters.addWidget(save_filter_btn)
         outer.addLayout(filters)
@@ -298,81 +330,95 @@ class MainWindow(QMainWindow):
         self.addToolBar(tb)
 
         self.act_new = QAction(tr("New item"), self)
+        self._tr("New item", self.act_new.setText)
         self.act_new.setShortcut("Ctrl+N")
-        self.act_new.setStatusTip("Create a new item")
+        self._tr("Create a new item", self.act_new.setStatusTip)
         self.act_new.triggered.connect(self.new_item)
         tb.addAction(self.act_new)
 
         self.act_edit = QAction(tr("Edit item"), self)
+        self._tr("Edit item", self.act_edit.setText)
         self.act_edit.setShortcut("Ctrl+E")
-        self.act_edit.setStatusTip("Edit the selected item")
+        self._tr("Edit the selected item", self.act_edit.setStatusTip)
         self.act_edit.triggered.connect(self.edit_selected)
         tb.addAction(self.act_edit)
 
         self.act_duplicate = QAction(tr("Duplicate"), self)
+        self._tr("Duplicate", self.act_duplicate.setText)
         self.act_duplicate.setShortcut("Ctrl+D")
-        self.act_duplicate.setStatusTip("Duplicate the selected item")
+        self._tr("Duplicate the selected item", self.act_duplicate.setStatusTip)
         self.act_duplicate.triggered.connect(self.duplicate_selected)
         tb.addAction(self.act_duplicate)
 
         self.act_delete = QAction(tr("Delete"), self)
+        self._tr("Delete", self.act_delete.setText)
         self.act_delete.setShortcut("Delete")
-        self.act_delete.setStatusTip("Move the selected item to trash")
+        self._tr("Move the selected item to trash", self.act_delete.setStatusTip)
         self.act_delete.triggered.connect(self.delete_selected)
         tb.addAction(self.act_delete)
 
         tb.addSeparator()
         self.act_undo = QAction(tr("Undo"), self)
+        self._tr("Undo", self.act_undo.setText)
         self.act_undo.setShortcut("Ctrl+Z")
-        self.act_undo.setStatusTip("Undo the last action")
+        self._tr("Undo the last action", self.act_undo.setStatusTip)
         self.act_undo.triggered.connect(self.undo_stack.undo)
         tb.addAction(self.act_undo)
 
         self.act_redo = QAction(tr("Redo"), self)
+        self._tr("Redo", self.act_redo.setText)
         self.act_redo.setShortcut("Ctrl+Y")
-        self.act_redo.setStatusTip("Redo the last undone action")
+        self._tr("Redo the last undone action", self.act_redo.setStatusTip)
         self.act_redo.triggered.connect(self.undo_stack.redo)
         tb.addAction(self.act_redo)
 
         tb.addSeparator()
         self.act_bulk_edit = QAction(tr("Bulk edit"), self)
+        self._tr("Bulk edit", self.act_bulk_edit.setText)
         self.act_bulk_edit.setShortcut("Ctrl+B")
-        self.act_bulk_edit.setStatusTip("Edit multiple selected items at once")
+        self._tr("Edit multiple selected items at once", self.act_bulk_edit.setStatusTip)
         self.act_bulk_edit.triggered.connect(self.bulk_edit)
         tb.addAction(self.act_bulk_edit)
 
         self.act_scan = QAction(tr("Scan"), self)
+        self._tr("Scan", self.act_scan.setText)
         self.act_scan.setShortcut("Ctrl+K")
-        self.act_scan.setStatusTip("Look up an item by scanning its barcode")
+        self._tr("Look up an item by scanning its barcode", self.act_scan.setStatusTip)
         self.act_scan.triggered.connect(self.scan_serial)
         tb.addAction(self.act_scan)
 
         self.act_trash = QAction(tr("Trash"), self)
-        self.act_trash.setStatusTip("View, restore, or purge deleted items")
+        self._tr("Trash", self.act_trash.setText)
+        self._tr("View, restore, or purge deleted items", self.act_trash.setStatusTip)
         self.act_trash.triggered.connect(self.show_trash)
         tb.addAction(self.act_trash)
 
         self.act_loan = QAction(tr("Loan"), self)
+        self._tr("Loan", self.act_loan.setText)
         self.act_loan.setShortcut("Ctrl+L")
-        self.act_loan.setStatusTip("Loan the selected item to a contact")
+        self._tr("Loan the selected item to a contact", self.act_loan.setStatusTip)
         self.act_loan.triggered.connect(self.loan_selected)
         tb.addAction(self.act_loan)
 
         self.act_contacts = QAction(tr("Contacts"), self)
-        self.act_contacts.setStatusTip("Manage contacts for loans")
+        self._tr("Contacts", self.act_contacts.setText)
+        self._tr("Manage contacts for loans", self.act_contacts.setStatusTip)
         self.act_contacts.triggered.connect(self.show_contacts)
         tb.addAction(self.act_contacts)
 
         self.act_report = QAction(tr("Report"), self)
+        self._tr("Report", self.act_report.setText)
         self.act_report.triggered.connect(self.generate_report)
         tb.addAction(self.act_report)
 
         self.act_dashboard = QAction(tr("Dashboard"), self)
+        self._tr("Dashboard", self.act_dashboard.setText)
         self.act_dashboard.triggered.connect(self.show_dashboard)
         tb.addAction(self.act_dashboard)
 
         tb.addSeparator()
         self.act_refresh = QAction(tr("Refresh"), self)
+        self._tr("Refresh", self.act_refresh.setText)
         self.act_refresh.setShortcut("F5")
         self.act_refresh.triggered.connect(self.refresh)
         tb.addAction(self.act_refresh)
@@ -383,9 +429,11 @@ class MainWindow(QMainWindow):
     def _build_menu(self) -> None:
         mb = self.menuBar()
 
-        file_menu = mb.addMenu(tr("&File"))
+        file_menu = mb.addMenu("")
+        self._tr("&File", file_menu.setTitle)
 
-        self._imp_menu = file_menu.addMenu(tr("&Import"))
+        self._imp_menu = file_menu.addMenu("")
+        self._tr("&Import", self._imp_menu.setTitle)
         self._add_action(self._imp_menu, "Excel workbook (.xlsx)…", self._import_excel)
         self._add_action(self._imp_menu, "ThingKeeper archive (.tkz)…", self._import_archive)
         self._add_action(self._imp_menu, "Encrypted archive (.tkz)…",
@@ -393,7 +441,8 @@ class MainWindow(QMainWindow):
         self._add_action(self._imp_menu, "CSV (.csv)…", self._import_csv)
         self._imp_menu.aboutToShow.connect(self._refresh_recent_imports)
 
-        self._exp_menu = file_menu.addMenu(tr("&Export"))
+        self._exp_menu = file_menu.addMenu("")
+        self._tr("&Export", self._exp_menu.setTitle)
         self._add_action(self._exp_menu, "ThingKeeper archive (.tkz)…", self._export_archive)
         self._add_action(self._exp_menu, "Encrypted archive (.tkz)…",
                          self._export_archive_encrypted)
@@ -403,60 +452,67 @@ class MainWindow(QMainWindow):
         self._exp_menu.aboutToShow.connect(self._refresh_recent_exports)
 
         file_menu.addSeparator()
-        self._add_action(file_menu, tr("&Dashboard…"), self.show_dashboard)
-        self._add_action(file_menu, tr("Generate &report (PDF)…"), self.generate_report, "Ctrl+R")
-        self._add_action(file_menu, tr("Custom report &builder…"), self.show_report_builder)
+        self._add_action(file_menu, "&Dashboard…", self.show_dashboard)
+        self._add_action(file_menu, "Generate &report (PDF)…", self.generate_report, "Ctrl+R")
+        self._add_action(file_menu, "Custom report &builder…", self.show_report_builder)
         file_menu.addSeparator()
-        self._add_action(file_menu, tr("&Quit"), self.close, "Ctrl+Q")
+        self._add_action(file_menu, "&Quit", self.close, "Ctrl+Q")
 
-        edit_menu = mb.addMenu(tr("&Edit"))
-        self._add_action(edit_menu, tr("&New item"), self.new_item, "Ctrl+N")
-        self._add_action(edit_menu, tr("&Edit item"), self.edit_selected, "Ctrl+E")
-        self._add_action(edit_menu, tr("&Duplicate item"), self.duplicate_selected, "Ctrl+D")
-        self._add_action(edit_menu, tr("&Delete item"), self.delete_selected, "Delete")
+        edit_menu = mb.addMenu("")
+        self._tr("&Edit", edit_menu.setTitle)
+        self._add_action(edit_menu, "&New item", self.new_item, "Ctrl+N")
+        self._add_action(edit_menu, "&Edit item", self.edit_selected, "Ctrl+E")
+        self._add_action(edit_menu, "&Duplicate item", self.duplicate_selected, "Ctrl+D")
+        self._add_action(edit_menu, "&Delete item", self.delete_selected, "Delete")
         edit_menu.addSeparator()
-        self._add_action(edit_menu, tr("&Undo"), self.undo_stack.undo, "Ctrl+Z")
-        self._add_action(edit_menu, tr("&Redo"), self.undo_stack.redo, "Ctrl+Y")
+        self._add_action(edit_menu, "&Undo", self.undo_stack.undo, "Ctrl+Z")
+        self._add_action(edit_menu, "&Redo", self.undo_stack.redo, "Ctrl+Y")
         edit_menu.addSeparator()
-        self._add_action(edit_menu, tr("&Bulk edit…"), self.bulk_edit, "Ctrl+B")
+        self._add_action(edit_menu, "&Bulk edit…", self.bulk_edit, "Ctrl+B")
 
-        view_menu = mb.addMenu(tr("&View"))
-        self._add_action(view_menu, tr("&Refresh"), self.refresh, "F5")
-        self._add_action(view_menu, tr("&Scan serial"), self.scan_serial, "Ctrl+K")
-        self._add_action(view_menu, tr("&Clear filters"), self._clear_filters)
-        self._add_action(view_menu, tr("&Dashboard…"), self.show_dashboard)
-        self._add_action(view_menu, tr("&Trash…"), self.show_trash)
+        view_menu = mb.addMenu("")
+        self._tr("&View", view_menu.setTitle)
+        self._add_action(view_menu, "&Refresh", self.refresh, "F5")
+        self._add_action(view_menu, "&Scan serial", self.scan_serial, "Ctrl+K")
+        self._add_action(view_menu, "&Clear filters", self._clear_filters)
+        self._add_action(view_menu, "&Dashboard…", self.show_dashboard)
+        self._add_action(view_menu, "&Trash…", self.show_trash)
         view_menu.addSeparator()
-        self._add_action(view_menu, tr("&Columns…"), self._show_column_menu_at_zero)
-        loans_menu = mb.addMenu(tr("&Loans"))
+        self._add_action(view_menu, "&Columns…", self._show_column_menu_at_zero)
+        loans_menu = mb.addMenu("")
+        self._tr("&Loans", loans_menu.setTitle)
 
-        self._add_action(loans_menu, tr("&Loan selected item…"), self.loan_selected, "Ctrl+L")
-        self._add_action(loans_menu, tr("&All loans…"), self.show_loans)
+        self._add_action(loans_menu, "&Loan selected item…", self.loan_selected, "Ctrl+L")
+        self._add_action(loans_menu, "&All loans…", self.show_loans)
         loans_menu.addSeparator()
-        self._add_action(loans_menu, tr("&Contacts…"), self.show_contacts)
-        self._add_action(loans_menu, tr("Loan &history for selected…"), self.show_loan_history)
+        self._add_action(loans_menu, "&Contacts…", self.show_contacts)
+        self._add_action(loans_menu, "Loan &history for selected…", self.show_loan_history)
 
-        tools_menu = mb.addMenu(tr("&Tools"))
-        self._add_action(tools_menu, tr("&Back up now…"), self.backup_now)
-        self._add_action(tools_menu, tr("&Restore from backup…"), self.restore_from_backup)
-        self._add_action(tools_menu, tr("Data &integrity check…"), self.show_integrity)
+        tools_menu = mb.addMenu("")
+        self._tr("&Tools", tools_menu.setTitle)
+        self._add_action(tools_menu, "&Back up now…", self.backup_now)
+        self._add_action(tools_menu, "&Restore from backup…", self.restore_from_backup)
+        self._add_action(tools_menu, "Data &integrity check…", self.show_integrity)
         tools_menu.addSeparator()
-        self._add_action(tools_menu, tr("&Settings…"), self.show_settings)
+        self._add_action(tools_menu, "&Settings…", self.show_settings)
         tools_menu.addSeparator()
-        self._add_action(tools_menu, tr("Open log &file"), self._open_log)
+        self._add_action(tools_menu, "Open log &file", self._open_log)
 
-        help_menu = mb.addMenu(tr("&Help"))
-        self._add_action(help_menu, tr("&Keyboard shortcuts…"), self.show_help, "F1")
-        self._add_action(help_menu, tr("&First-launch tour…"), self.show_tour)
+        help_menu = mb.addMenu("")
+        self._tr("&Help", help_menu.setTitle)
+        self._add_action(help_menu, "&Keyboard shortcuts…", self.show_help, "F1")
+        self._add_action(help_menu, "&First-launch tour…", self.show_tour)
         help_menu.addSeparator()
-        self._add_action(help_menu, tr("&About"), self._about)
+        self._add_action(help_menu, "&About", self._about)
 
-    def _add_action(self, menu, text, slot, shortcut=None) -> None:
-        act = QAction(text, self)
+    def _add_action(self, menu, text, slot, shortcut=None) -> QAction:
+        act = QAction(self)
+        self._tr(text, act.setText)
         if shortcut:
             act.setShortcut(shortcut)
         act.triggered.connect(slot)
         menu.addAction(act)
+        return act
 
     def _build_statusbar(self) -> None:
         sb = QStatusBar()

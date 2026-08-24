@@ -111,3 +111,24 @@ def test_main_window_scheduler_starts(qtbot, db, fake_msgbox):
     qtbot.addWidget(w)
     assert w._backup_scheduler._running
     w._backup_scheduler.stop()
+
+
+def test_main_window_live_retranslate(qtbot, db, fake_msgbox, sample_item):
+    from thingkeeper import i18n
+    from thingkeeper.ui.main_window import MainWindow
+
+    i18n.set_language("en")
+    w = MainWindow()
+    qtbot.addWidget(w)
+    assert w.act_new.text() == "New item"
+    assert w.act_trash.text() == "Trash"
+
+    i18n.set_language("el")
+    w._retranslate_ui()
+    assert w.act_new.text() == "Νέο αντικείμενο"
+    assert w.act_trash.text() == "Κάδος"
+
+    i18n.set_language("en")
+    w._retranslate_ui()
+    assert w.act_new.text() == "New item"
+    assert w.act_trash.text() == "Trash"

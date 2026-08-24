@@ -446,6 +446,18 @@ Wrapping pattern: `from ..i18n import tr` then `tr("&File")` in any UI
 code. Mnemonic markers (`&`) are preserved through the table so Qt
 shortcuts keep working in both languages.
 
+**Live retranslation (no restart):** `MainWindow` keeps a
+`_tr_items` list of `(setter, english_text)` tuples for every
+translatable widget/action (menus, toolbar actions, filter labels,
+search placeholder). The `_tr(text, setter)` helper translates
+immediately and registers the pair. On `QEvent.LanguageChange`,
+`changeEvent()` calls `_retranslate_ui()` which re-applies `tr()` to
+each stored pair. The settings dialog posts a `LanguageChange` event
+to its parent after `set_language()`, so the UI swaps instantly when
+the user clicks Save. Dialogs (Item/Loan/Settings) are rebuilt fresh
+on each open, so they pick up the current language automatically
+without needing retranslation.
+
 ### 6.13 In-app help: shortcuts table + multi-step tour
 
 `thingkeeper/ui/help_dialog.py` ships two dialogs, both bilingual:

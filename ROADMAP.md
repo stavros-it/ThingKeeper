@@ -185,7 +185,10 @@ first-launch tour.
   restored on next launch. **Settings → Language** dropdown switches
   between `en` (English) and `el` (Ελληνικά). All menu items, toolbar
   actions, filter labels, and the Settings/Help dialog strings are
-  wrapped in `tr()`.
+  wrapped in `tr()`. Switching language takes effect immediately — no
+  restart needed: the settings dialog posts a `QEvent.LanguageChange`
+  to the main window, which re-applies `tr()` to every registered
+  widget/action via `_retranslate_ui()`.
 - **In-app help** — new `thingkeeper/ui/help_dialog.py`:
   - `ShortcutsDialog` — a 2-column table of all keyboard shortcuts
     (Ctrl+N, Ctrl+E, F1, etc.), bilingual content.
