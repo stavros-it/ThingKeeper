@@ -231,6 +231,12 @@ does.
 
 ---
 
+## v1.4.1 — Archive import fix (Done)
+
+- **Fix: archive import id collision** — see v1.4.
+
+---
+
 ## v1.4 — Release checksums, live language switch, responsive UI (Done)
 
 **Goal:** make every release verifiable, switch language without a
