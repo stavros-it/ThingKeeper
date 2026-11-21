@@ -129,6 +129,17 @@ def test_archive_round_trip(repo, sample_item, tmp_path):
     assert result.imported == 5
 
 
+def test_archive_import_into_populated_db(repo, sample_item, tmp_path):
+    for i in range(3):
+        create_item(sample_item(serial=f"DUP-{i:03d}"))
+    archive_path = tmp_path / "dup.tkz"
+    export_archive(archive_path)
+
+    result = import_archive(archive_path)
+    assert result.imported == 3
+    assert len(list_items()) == 6
+
+
 def test_encrypted_archive_round_trip(repo, sample_item, tmp_path):
     for i in range(3):
         create_item(sample_item(serial=f"ENC-{i:03d}"))

@@ -259,6 +259,9 @@ desktop area.
   Windows, panels on Linux) to size windows. `MainWindow` fills 85%
   of the available area; `ItemDialog` fills 95% of the height so the
   form reaches from the top of the work area to the taskbar.
+- **Fix: archive import id collision** — importing a `.tkz` into a
+  populated database failed with `UNIQUE constraint failed: items.id`.
+  Ids already in use are now dropped so SQLite assigns new ones.
 
 ---
 

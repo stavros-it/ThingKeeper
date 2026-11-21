@@ -348,6 +348,10 @@ items are included so restoring a backup brings back the trash; their
 Contacts and loans are serialised alongside items; loan-to-item links
 are re-mapped by serial on import.
 
+Archive item ids are preserved on import only when free in the target DB;
+ids already in use are dropped so SQLite assigns new ones (avoids
+`UNIQUE constraint failed: items.id` when restoring into a populated DB).
+
 ### 6.4 Import is idempotent at the row level, not the item level
 
 Importing the same `.xlsx` twice creates duplicate items. This was deliberate:

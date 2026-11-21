@@ -10,6 +10,7 @@ import zipfile
 from pathlib import Path
 
 from . import config
+from .database import connect
 from .repository import Item, bulk_insert, to_iso
 
 # Column header -> item field mapping for Excel import.
@@ -224,6 +225,17 @@ def import_archive(path: str | Path) -> ImportResult:
                     str(config.ATTACHMENTS_DIR / Path(r).name)
                     for r in receipts if Path(r).name in attach_names
                 ]))
+
+        conn = connect()
+        try:
+            taken = {r["id"] for r in conn.execute("SELECT id FROM items")}
+        finally:
+            conn.close()
+        for it in items:
+            if it.id is not None and it.id in taken:
+                it.id = None
+            elif it.id is not None:
+                taken.add(it.id)
 
         imported = bulk_insert(items)
         # Now that items have IDs, restore extra images and receipts.
